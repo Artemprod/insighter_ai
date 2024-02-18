@@ -13,10 +13,10 @@ class MongoDB:
     bd_name: str
     # для пользования на локальной машине
     local_port: int
-    local_host: int | str
+    local_host: Union[int, str]
     # для пользования на сервере в доккере
     docker_port: int
-    docker_host: int | str
+    docker_host: Union[int, str]
 
 
 @dataclass
@@ -24,11 +24,11 @@ class RedisStorage:
     # для пользования на локальной машине
 
     admin_bot_local_port: int
-    admin_bot_local_host: int | str
+    admin_bot_local_host: Union[int, str]
     # для пользования на сервере в доккере
 
     admin_bot_docker_port: int
-    admin_bot_docker_host: int | str
+    admin_bot_docker_host: Union[int, str]
 
 
 @dataclass

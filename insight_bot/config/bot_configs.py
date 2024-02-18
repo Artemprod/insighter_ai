@@ -1,6 +1,6 @@
 from environs import Env
 from dataclasses import dataclass
-
+from typing import Union
 
 @dataclass
 class System_type:
@@ -21,21 +21,21 @@ class MongoDB:
     bd_name: str
     # для пользования на локальной машине
     local_port: int
-    local_host: int | str
+    local_host: Union[int, str]
     # для пользования на сервере в доккере
     docker_port: int
-    docker_host: int | str
+    docker_host: Union[int, str]
 
 
 @dataclass
 class RedisStorage:
     # для пользования на локальной машине
     main_bot_local_port: int
-    main_bot_local_host: int | str
+    main_bot_local_host: Union[int, str]
 
     # для пользования на сервере в доккере
     main_bot_docker_port: int
-    main_bot_docker_host: int | str
+    main_bot_docker_host: Union[int, str]
 
 
 @dataclass

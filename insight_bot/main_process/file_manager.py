@@ -28,7 +28,7 @@ class MediaFileManager(IMediaFileManager):
         raise NotImplementedError
 
     @staticmethod
-    async def get_file_id_from_message(message: Message) -> str | None:
+    async def get_file_id_from_message(message: Message):
         content_type_to_file_id_attr = {
             ContentType.VOICE: "voice",
             ContentType.AUDIO: "audio",
@@ -78,7 +78,7 @@ class TelegramMediaFileManager(MediaFileManager):
 
     async def get_media_file(self,
                              message: Message,
-                             bot: Bot) -> str | None:
+                             bot: Bot):
         try:
             result = await self.get_file_path(message, bot)
             self.log_file_info('info', message, result)
