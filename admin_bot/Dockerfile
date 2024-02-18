@@ -5,7 +5,6 @@ COPY . .
 
 RUN apt-get update -y && apt-get upgrade -y && pip install --upgrade pip  \
     && apt-get install -y micro \
-    && apt install snapd && snap install micro --classic \
     && pip install --upgrade setuptools  && apt-get install nano \
     && pip install -r requirements.txt \
     && apt-get clean
