@@ -7,8 +7,10 @@ from aiogram.client.telegram import TelegramAPIServer
 from aiogram.fsm.storage.redis import RedisStorage, Redis
 
 from handlers import command_handler, docs_handlers, process_file_handler
+from insight_bot.enteties.queue_entity import PipelineQueues
+from main_process.process_pipline import ProcesQueuePipline
 from insiht_bot_container import assistant_repository, config_data, user_repository, document_repository, progress_bar, \
-    queue_pipeline, pipeline_process
+    server_file_manager, text_invoker, gpt_dispatcher, file_format_manager
 
 from keyboards.main_menu import set_main_menu
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -16,7 +18,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from midleware.attempts import CheckAttemptsMiddleware
 
 
-async def create_bot() -> None:
+async def create_bot(queue_pipeline) -> None:
     root_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 
     config = config_data
@@ -51,13 +53,26 @@ async def create_bot() -> None:
     await dp.start_polling(bot)
 
 
-async def create_pipline_processes() -> None:
+async def create_pipline_processes(queue_pipeline) -> None:
+
+    pipeline_process = ProcesQueuePipline(
+        queue_pipeline=queue_pipeline,
+        database_document_repository=document_repository,
+        server_file_manager=server_file_manager,
+        text_invoker=text_invoker,
+        ai_llm_request=gpt_dispatcher,
+        format_definer=file_format_manager,
+        progress_bar=progress_bar,
+        config_data=config_data
+    )
     await pipeline_process.run_process()
 
 
 async def main():
-    bot_task = asyncio.create_task(create_bot())
-    pipline_task = asyncio.create_task(create_pipline_processes())
+    loop = asyncio.get_running_loop()
+    queue_pipeline = PipelineQueues(loop=loop)
+    bot_task = asyncio.create_task(create_bot(queue_pipeline=queue_pipeline))
+    pipline_task = asyncio.create_task(create_pipline_processes(queue_pipeline=queue_pipeline))
     await bot_task
     await pipline_task
 

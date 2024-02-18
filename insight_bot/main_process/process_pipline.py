@@ -1,6 +1,8 @@
 import asyncio
 import logging
 from asyncio import Queue
+from typing import Optional
+
 from aiofiles import os as asyncos
 import aiogram
 from dataclasses import dataclass
@@ -20,15 +22,7 @@ from main_process.text_invoke import TextInvokeFactory
 from services.service_functions import estimate_transcribe_duration
 from states.summary_from_audio import FSMSummaryFromAudioScenario
 
-
-@dataclass
-class PipelineQueues:
-    income_items_queue: asyncio.Queue = asyncio.Queue()
-    text_invoke_queue: asyncio.Queue = asyncio.Queue()
-    text_preprocess_queue: asyncio.Queue = asyncio.Queue()
-    text_gen_answer_queue: asyncio.Queue = asyncio.Queue()
-    result_dispatching_queue: asyncio.Queue = asyncio.Queue()
-    transcribed_text_sender_queue: asyncio.Queue = asyncio.Queue()
+from enteties.queue_entity import PipelineQueues
 
 
 class ProcesQueuePipline:

@@ -85,17 +85,7 @@ text_invoker = TextInvokeFactory(format_definer=file_format_manager,
 
 # ______PROCESS_PIPELINE____________________________________________
 
-queue_pipeline = PipelineQueues()
-pipeline_process = ProcesQueuePipline(
-    queue_pipeline=queue_pipeline,
-    database_document_repository=document_repository,
-    server_file_manager=server_file_manager,
-    text_invoker=text_invoker,
-    ai_llm_request=gpt_dispatcher,
-    format_definer=file_format_manager,
-    progress_bar=progress_bar,
-    config_data=config_data
-)
+
 
 #____SERVER_CONNECTION____________________________________________
 # server_file_worker = ServerFileManager()
