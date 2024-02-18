@@ -17,7 +17,7 @@ class MongoORMConnection:
         elif system_type == "docker":
             connect(db=mongo.bd_name,
                     host=mongo.docker_host,
-                    port=int(mongo.docker_port))
+                    port=int(mongo.local_port))
 
 
 
