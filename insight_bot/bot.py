@@ -4,8 +4,8 @@ import os.path
 from aiogram import Bot, Dispatcher
 
 from aiogram.client.telegram import TelegramAPIServer
-from aiogram.fsm.storage.redis import RedisStorage
-from redis import Redis
+from aiogram.fsm.storage.redis import RedisStorage, Redis
+
 from handlers import command_handler, docs_handlers, process_file_handler
 from insiht_bot_container import assistant_repository, config_data, user_repository, document_repository, progress_bar, \
     queue_pipeline, pipeline_process
