@@ -13,14 +13,14 @@ async def main() -> None:
     root_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
     config = config_data
 
-    # redis = Redis(host=config.redis_storage.admin_bot_docker_host,
-    #               port=config.redis_storage.admin_bot_docker_port)
-    # storage: RedisStorage = RedisStorage(redis=redis)
+    redis = Redis(host=config.redis_storage.admin_bot_docker_host,
+                  port=config.redis_storage.admin_bot_docker_port)
+    storage: RedisStorage = RedisStorage(redis=redis)
 
     bot: Bot = Bot(token=config.AdminBot.tg_bot_token, parse_mode='HTML')
 
     # Добовляем хэгдлеры в диспечтер через роутеры
-    dp: Dispatcher = Dispatcher(
+    dp: Dispatcher = Dispatcher(storage=storage,
                                  root_dir=root_dir,
                                 assistant_repository=assistant_repository)
     dp.include_router(command_handler.router)
