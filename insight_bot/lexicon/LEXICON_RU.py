@@ -77,4 +77,5 @@ LEXICON_ASSISTANTS: dict = {
 LEXICON_COMMANDS: dict[str, str] = {
     '/start': 'Перезапустить бот',
     '/feedback': 'оставить обратную связь',
+    '/tariff': 'посмотреть тарифы',
 }

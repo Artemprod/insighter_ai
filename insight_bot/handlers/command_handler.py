@@ -5,6 +5,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, WebAppIn
 
 from DB.Mongo.mongo_db import MongoAssistantRepositoryORM, MongoUserRepoORM
 from costume_filters.feedback import FeedbackCommandFilter
+from costume_filters.paye import TariffCommandFilter
 
 from keyboards.inline_keyboards import crete_inline_keyboard_assistants, crete_inline_keyboard_back_from_loading
 
@@ -38,6 +39,19 @@ async def feedback_handler(message: Message):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="Открыть форму фидбека", web_app=WebAppInfo(url="https://tally.so/r/nPOeRd"))],
+            [InlineKeyboardButton(text="Назад", callback_data='base')]  # Добавляем кнопку "Назад"
+        ]
+    )
+    # Отправляем сообщение с кнопкой
+    await message.answer("Чтобы оставить фидбек, нажмите на кнопку ниже:", reply_markup=keyboard)
+
+
+@router.message(TariffCommandFilter())
+async def feedback_handler(message: Message):
+    # Создаем кнопку для Web App
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Оплатить сервис", web_app=WebAppInfo(url="https://insighter.io/tarifs"))],
             [InlineKeyboardButton(text="Назад", callback_data='base')]  # Добавляем кнопку "Назад"
         ]
     )
