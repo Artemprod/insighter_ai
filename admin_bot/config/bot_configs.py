@@ -1,3 +1,5 @@
+from typing import Union
+
 from environs import Env
 from dataclasses import dataclass
 
@@ -30,12 +32,16 @@ class RedisStorage:
     admin_bot_docker_port: int
     admin_bot_docker_host: Union[int, str]
 
+@dataclass
+class System_type:
+    system_type: str
 
 @dataclass
 class Config:
     data_base: MongoDB
     redis_storage: RedisStorage
     AdminBot: AdminTelegramBot
+    system: System_type
 
 
 def load_bot_config(path) -> Config:
@@ -44,7 +50,7 @@ def load_bot_config(path) -> Config:
 
 
     return Config(
-
+        system=System_type(system_type=env('SYSTEM')),
         AdminBot=AdminTelegramBot(tg_bot_token=env('ADMIN_TELEGRAM_BOT_TOKEN')),
         data_base=MongoDB(bd_name=env('DATABASE'),
                           local_port=env('MONGO_DB_LOCAL_PORT'),

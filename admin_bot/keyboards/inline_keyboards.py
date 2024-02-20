@@ -75,6 +75,7 @@ def crete_inline_keyboard_redact_actions(assistant_repository: MongoAssistantRep
         "name": "Заголовок",
         "assistant_prompt": "Системный промпт",
         "user_prompt": "Рабочий промпт",
+        "user_prompt_for_chunks": "Промпт для кусков",
     }
 
     kp_builder: InlineKeyboardBuilder = InlineKeyboardBuilder()

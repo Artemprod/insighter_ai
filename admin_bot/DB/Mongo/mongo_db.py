@@ -9,14 +9,17 @@ from config.bot_configs import MongoDB
 
 
 class MongoORMConnection:
-    def __init__(self, mongo: MongoDB):
-        connect(db=mongo.bd_name,
-                host=mongo.docker_host,
-                port=int(mongo.local_port))
-
-        # connect(db=mongo.bd_name,
-        #         host=mongo.local_host,
-        #         port=int(mongo.local_port))
+    def __init__(self, mongo,
+                 system_type):
+        system_type = system_type
+        if system_type == "local":
+            connect(db=mongo.bd_name,
+                    host=mongo.local_host,
+                    port=int(mongo.local_port))
+        elif system_type == "docker":
+            connect(db=mongo.bd_name,
+                    host=mongo.docker_host,
+                    port=int(mongo.local_port))
 
 
 class MongoAssistantRepositoryORM:
@@ -78,7 +81,6 @@ class MongoAssistantRepositoryORM:
         for _ in range(3):
             short_hash += str(random.randint(0, 9))
         return str(short_hash)
-
 
 
 if __name__ == '__main__':
