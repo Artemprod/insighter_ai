@@ -12,10 +12,10 @@ from keyboards.calback_factories import AssistantCallbackFactory
 from keyboards.inline_keyboards import crete_inline_keyboard_assistants, \
     crete_inline_keyboard_back_from_loading
 from lexicon.LEXICON_RU import LEXICON_RU
-from main_process.file_format_manager import FileFormatDefiner
+
 from main_process.process_pipline import PipelineQueues, PipelineData
 from services.service_functions import load_assistant, \
-    generate_text_file, form_content, estimate_transcribe_duration, estimate_gen_summary_duration, \
+    generate_text_file,  estimate_gen_summary_duration, \
     from_pipeline_data_object
 from states.summary_from_audio import FSMSummaryFromAudioScenario
 
@@ -26,7 +26,9 @@ router = Router()
 @router.callback_query(AssistantCallbackFactory.filter())
 async def processed_gen_answer(callback: CallbackQuery,
                                callback_data: AssistantCallbackFactory,
-                               state: FSMContext
+                               state: FSMContext,
+                            assistant_repository:MongoAssistantRepositoryORM,
+                            user_repository:MongoUserRepoORM,
                                ):
     # Проверяем, есть ли текст в сообщении
     if callback.message.text:
@@ -38,7 +40,9 @@ async def processed_gen_answer(callback: CallbackQuery,
         message = await callback.message.answer(
             text=LEXICON_RU.get('instructions', 'как дела ?'),
             reply_markup=crete_inline_keyboard_back_from_loading())
-
+    # записываем имя асистента пользователью
+    assistant_name = await assistant_repository.get_assistant_name(assistant_id=callback_data.assistant_id)
+    await user_repository.add_assistant_call_to_user(user_tg_id=callback.from_user.id, assistant_name=assistant_name)
     await state.update_data(assistant_id=callback_data.assistant_id,
                             instruction_message_id=message.message_id)
     await state.set_state(FSMSummaryFromAudioScenario.load_file)

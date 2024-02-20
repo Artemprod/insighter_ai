@@ -33,7 +33,7 @@ async def create_bot(queue_pipeline) -> None:
     bot: Bot = Bot(token=config.Bot.tg_bot_token, parse_mode='HTML', session=session)
 
     # Добовляем хэгдлеры в диспечтер через роутеры
-    dp: Dispatcher = Dispatcher(storage=storage,
+    dp: Dispatcher = Dispatcher(
                                 root_dir=root_dir,
                                 assistant_repository=assistant_repository,
                                 user_repository=user_repository,

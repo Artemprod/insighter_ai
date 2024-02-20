@@ -105,7 +105,7 @@ class TelegramMediaFileManager(MediaFileManager):
 
 
 class ServerFileManager(MediaFileManager):
-    local_file_path = r'D:\Python_projects\insighter\insight_bot\main_process\temp'
+    local_file_path = r'E:\insighter_ai\insight_bot\main_process\temp'
     @dataclass
     class Configs:
         hostname: str
@@ -145,9 +145,9 @@ class ServerFileManager(MediaFileManager):
 
     def create_file_paths(self) -> Filepaths:
         token = self.__bot_token()
-        video = f'/var/lib/docker/volumes/insighter_shared_volume/_data/{token}/videos/'
-        audio = f'/var/lib/docker/volumes/insighter_shared_volume/_data/{token}/music/'
-        documents = f'/var/lib/docker/volumes/insighter_shared_volume/_data/{token}/documents/'
+        video = f'/var/lib/docker/volumes/insighter_ai_shared_volume/_data/{token}/videos/'
+        audio = f'/var/lib/docker/volumes/insighter_ai_shared_volume/_data/{token}/music/'
+        documents = f'/var/lib/docker/volumes/insighter_ai_shared_volume/_data/{token}/documents/'
         return ServerFileManager.Filepaths(audio=audio, video=video, documents=documents)
 
     @classmethod

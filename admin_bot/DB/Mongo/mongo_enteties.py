@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, DateTimeField, IntField, DictField
+from mongoengine import Document, StringField, DateTimeField, IntField, DictField, ListField
 
 
 class Assistant(Document):
@@ -24,6 +24,7 @@ class User(Document):
     documents = DictField()
     registration_date = DateTimeField()
     payment_history = DictField()
+    assistant_call = ListField()
 
     meta = {
         'collection': 'Users'  # Здесь указывается имя коллекции

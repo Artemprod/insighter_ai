@@ -6,7 +6,8 @@ from insiht_bot_container import document_repository
 from keyboards.calback_factories import AssistantCallbackFactory, DocumentsCallbackFactory
 
 
-def crete_inline_keyboard_assistants(assistant_repository: MongoAssistantRepositoryORM, user_tg_id):
+def crete_inline_keyboard_assistants(assistant_repository: MongoAssistantRepositoryORM,
+                                     user_tg_id):
 
     assistants_list: Assistant = assistant_repository.get_all_assistants()
     kp_builder: InlineKeyboardBuilder = InlineKeyboardBuilder()

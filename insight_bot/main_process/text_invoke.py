@@ -138,8 +138,7 @@ class AudioFileHandler(IAudioFileHandler):
 class FORMATS:
     VIDEO_FORMATS: list[str]
     AUDIO_FORMATS: list[str]
-    TXT_FORMAT: str
-    PDF_FORMAT: str
+
 
     def __init__(self):
         self.__load_formats_from_env()
@@ -149,8 +148,6 @@ class FORMATS:
         env.read_env('.env')
         self.VIDEO_FORMATS = env('VIDEO_FORMATS')
         self.AUDIO_FORMATS = env('AUDIO_FORMATS')
-        self.TXT_FORMAT = env('TXT_FORMAT')
-        self.PDF_FORMAT = env('PDF_FORMAT')
         if isinstance(env('VIDEO_FORMATS'), str):  # Проверка формата строки
             self.VIDEO_FORMATS = env('VIDEO_FORMATS').split(',')
         if isinstance(env('AUDIO_FORMATS'), str):
@@ -158,7 +155,6 @@ class FORMATS:
 
     def make_list_of_formats(self) -> list[str]:  # Указываем возвращаемый тип
         all_formats = self.VIDEO_FORMATS + self.AUDIO_FORMATS
-        all_formats.extend([self.TXT_FORMAT, self.PDF_FORMAT])  # Используем extend
         return all_formats
 
 

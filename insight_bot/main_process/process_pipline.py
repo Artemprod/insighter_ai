@@ -96,7 +96,6 @@ class ProcesQueuePipline:
                                                                )
                 await data.fsm_bot_state.update_data(instruction_message_id=message.message_id)
                 await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
-                raise NotSupportedFormatError(message=income_file_format)
         except Exception as e:
             await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                  text=LEXICON_RU['error_message'])

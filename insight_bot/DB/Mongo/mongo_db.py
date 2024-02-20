@@ -20,8 +20,7 @@ class MongoORMConnection:
                     port=int(mongo.local_port))
 
 
-
-#TODO переписать все асинхронно с использованием асинхронной библиотекк mongoengine
+# TODO переписать все асинхронно с использованием асинхронной библиотекк mongoengine
 class MongoAssistantRepositoryORM:
 
     @staticmethod
@@ -31,6 +30,11 @@ class MongoAssistantRepositoryORM:
     @staticmethod
     async def get_one_assistant(assistant_id: str):
         return Assistant.objects(assistant_id=assistant_id).get()
+
+    @staticmethod
+    async def get_assistant_name(assistant_id: str) -> str:
+        assistant = Assistant.objects(assistant_id=assistant_id).get()
+        return assistant.assistant
 
     def create_new_assistants(self, assistant: Assistant):
         as_id = self.generate_id()
@@ -144,6 +148,18 @@ class MongoUserRepoORM:
             logging.info(f'0 попыток нужно дбавить  {user.tg_username}, {user.name}, {user.tg_id}')
             print(f'0 попыток нужно дбавить {user.tg_username}, {user.name}, {user.tg_id}')
             return None
+
+    @staticmethod
+    async def add_assistant_call_to_user(user_tg_id,
+                                         assistant_name):
+        user: User = User.objects(tg_id=user_tg_id).get()
+        data = {'assistant': assistant_name,
+                'date': datetime.datetime.now().strftime("%Y-%m-%d, %H:%M")}
+        try:
+            user.assistant_call.append(data)
+            user.save()
+        except Exception as e:
+            logging.exception(e, "cant save assistant name")
 
 
 class UserDocsRepoORM:
