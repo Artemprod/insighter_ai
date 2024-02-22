@@ -1,15 +1,17 @@
 import asyncio
 import logging
-
+import datetime as dt_t
+import math
 from datetime import datetime
 from typing import Callable
 
+import ffmpeg
 import tiktoken
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, ContentType, Audio
 from aiogram import Bot
 
-from DB.Mongo.mongo_db import MongoAssistantRepositoryORM
+from DB.Mongo.mongo_db import MongoAssistantRepositoryORM, UserBalanceRepoORM
 from DB.Mongo.mongo_enteties import Assistant
 from api.gpt import GPTAPIrequest
 import os
@@ -22,6 +24,8 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 
+from insiht_bot_container import server_file_manager, config_data
+from main_process.file_manager import ServerFileManager
 
 
 class IMediaFileManager(ABC):
@@ -142,6 +146,7 @@ async def from_pipeline_data_object(
         bot: Bot,
         assistant_id: str,
         fsm_state: FSMContext,
+        file_duration: float,
         additional_system_information=None,
         additional_user_information=None,
 ) -> PipelineData:
@@ -153,6 +158,7 @@ async def from_pipeline_data_object(
         telegram_bot=bot,
         assistant_id=assistant_id,
         fsm_bot_state=fsm_state,
+        file_duration=file_duration,
         additional_system_information=additional_system_information,
         additional_user_information=additional_user_information,
     )
@@ -196,6 +202,56 @@ async def estimate_transcribe_duration(message: Message):
         return int((download_file_duration + transcribe_duration + 6))
     else:
         pass
+
+async def compare_user_minutes_and_file(user_tg_id, file_duration, user_balance_repo:UserBalanceRepoORM):
+    user_time_balance = await user_balance_repo.get_user_time_balance(tg_id=user_tg_id)
+    return user_time_balance - file_duration
+
+async def estimate_media_duration_in_minutes(bot: Bot,
+                                             message: Message):
+    file_path_coro = None
+    system_type = config_data.system.system_type
+    if system_type == "docker":
+        file_path_coro = server_file_manager.get_media_file(message=message, bot=bot)
+    elif system_type == "local":
+        file_path_coro = ServerFileManager().get_media_file(message=message,
+                                                            bot=bot)
+    file_path = await file_path_coro
+    file_duration = await get_media_duration_in_seconds(file_path)
+    return file_duration
+
+
+async def get_media_duration_in_seconds(filepath):
+    """
+    Извлекает длину медиафайла (видео или аудио) из метаданных и возвращает её в секундах.
+
+    Args:
+        filepath: Путь к медиафайлу.
+
+    Returns:
+        Длительность медиафайла в секундах.
+    """
+    probe = await asyncio.to_thread(ffmpeg.probe, filepath)
+    format_info = probe['format']
+    duration_sec = float(format_info['duration'])
+
+    print(f"Длина медиафайла: {duration_sec:.2f} секунд(ы)")
+    return duration_sec
+
+
+async def seconds_to_min_sec(seconds):
+    # Округляем секунды до большего
+    seconds_rounded = math.ceil(seconds)
+
+    # Создаем объект timedelta
+    td = dt_t.timedelta(seconds=seconds_rounded)
+
+    # Получаем общее количество минут и оставшиеся секунды
+    total_minutes = td.seconds // 60
+    remaining_seconds = td.seconds % 60
+
+    # Формируем строку с часами и минутами
+    return f"{total_minutes}:{remaining_seconds:02d}"
 
 
 # TODO вынести все сервесные функции

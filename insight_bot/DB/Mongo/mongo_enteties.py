@@ -1,5 +1,5 @@
 
-from mongoengine import Document, StringField, DateTimeField, IntField, DictField,ListField
+from mongoengine import Document, StringField, DateTimeField, IntField, DictField,ListField, DecimalField, FloatField
 
 
 class Assistant(Document):
@@ -20,6 +20,8 @@ class User(Document):
     tg_username = StringField()
     name = StringField()
     tg_id = IntField()
+    money_balance = DecimalField()
+    time_balance = FloatField()
     attempts = IntField()
     documents = DictField()
     registration_date = DateTimeField()

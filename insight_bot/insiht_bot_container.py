@@ -1,4 +1,5 @@
-from DB.Mongo.mongo_db import MongoORMConnection, MongoAssistantRepositoryORM, MongoUserRepoORM, UserDocsRepoORM
+from DB.Mongo.mongo_db import MongoORMConnection, MongoAssistantRepositoryORM, MongoUserRepoORM, UserDocsRepoORM, \
+    UserBalanceRepoORM
 from api.progress_bar.command import ProgressBarClient
 from config.bot_configs import load_bot_config, Config
 from main_process.ChatGPT.gpt_dispatcher import TextTokenizer, OneRequestGPTWorker, BigDataGPTWorker, GPTDispatcher
@@ -11,7 +12,7 @@ from main_process.file_format_manager import TelegramServerFileFormatDefiner
 from main_process.file_manager import TelegramMediaFileManager, ServerFileManager
 from main_process.media_file_manager import MediaFileManager
 # from main_process.pre_processing import SpacyTextPreprocessor, TextPreprocessorAggregator
-from main_process.process_pipline import PipelineQueues, ProcesQueuePipline
+
 from main_process.text_invoke import PdfFileHandler, TxtFileHandler, VideoFileHandler, AudioFileHandler, \
     TextInvokeFactory, FORMATS
 
@@ -25,6 +26,7 @@ MongoORMConnection(config_data.data_base, system_type=config_data.system.system_
 assistant_repository = MongoAssistantRepositoryORM()
 user_repository = MongoUserRepoORM()
 document_repository = UserDocsRepoORM()
+user_balance_repo = UserBalanceRepoORM()
 
 # ______PROGRESSBAR____________________________________________
 progress_bar = ProgressBarClient()

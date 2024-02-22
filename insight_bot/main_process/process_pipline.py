@@ -59,7 +59,7 @@ class ProcesQueuePipline:
         message: aiogram.types.Message = data.telegram_message
         bot: aiogram.Bot = data.telegram_bot
         # TODO Использую локальнубю систему сохранения файлов для сервера раскоменить
-        system = self.__config_data .system.system_type
+        system = self.__config_data.system.system_type
         print(system)
         if system == "docker":
             file_path_coro = self.__server_file_manager.get_media_file(message=message, bot=bot)

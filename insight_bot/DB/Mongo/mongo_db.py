@@ -101,12 +101,16 @@ class MongoUserRepoORM:
     async def save_new_user(tg_username,
                             name,
                             tg_id,
-                            attempts=3):
+                            attempts=3,
+                            money=0,
+                            minutes=180):
         new_user: User = User(
             tg_username=tg_username,
             name=name,
             tg_id=tg_id,
             attempts=attempts,
+            money_balance=money,
+            time_balance=minutes * 60,
             documents={},
             registration_date=datetime.datetime.now(),
             payment_history={f'{datetime.datetime.now()}': 0},
@@ -251,6 +255,58 @@ class UserDocsRepoORM:
         random_bytes = os.urandom(16)
         hash_object = hashlib.sha256(random_bytes)
         return hash_object.hexdigest()[:length]
+
+
+class UserBalanceRepoORM:
+    @staticmethod
+    async def get_user_money_balance(tg_id):
+        user: User = User.objects(tg_id=tg_id).get()
+        balance = user.money_balance
+        return balance
+
+    @staticmethod
+    async def get_user_time_balance(tg_id):
+        user: User = User.objects(tg_id=tg_id).get()
+        balance = user.time_balance
+        return balance
+
+    @staticmethod
+    async def add_user_time_balance(tg_id,
+                                    time):
+        user: User = User.objects(tg_id=tg_id).get()
+        user.time_balance += time
+        user.time_balance = round(user.time_balance)
+        user.save()
+
+    @staticmethod
+    async def update_time_balance(tg_id,
+                                  time_to_subtract):
+        user: User = User.objects(tg_id=tg_id).get()
+        user.time_balance -= time_to_subtract
+        user.time_balance = round(user.time_balance)
+        user.save()
+    @staticmethod
+    async def add_user_money_balance(tg_id,
+                                     money):
+        user: User = User.objects(tg_id=tg_id).get()
+        user.money_balance += money
+        user.save()
+
+
+    @staticmethod
+    async def money_to_minutes(amount, exchange_rate=1):
+        """
+        Конвертирует деньги в минуты по заданному курсу обмена.
+
+        Args:
+            amount (float): Количество денег для конвертации.
+            exchange_rate (float): Курс обмена денег на минуты. По умолчанию равен 1.
+
+        Returns:
+            int: Количество минут, полученное в результате конвертации.
+        """
+
+        return int(amount * exchange_rate)
 
 
 if __name__ == '__main__':
