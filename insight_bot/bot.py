@@ -50,7 +50,8 @@ async def create_bot(queue_pipeline) -> None:
             document_repository=document_repository,
             process_queue=queue_pipeline,
             progress_bar=progress_bar,
-            balance_repo=user_balance_repo
+            user_balance_repo=user_balance_repo
+
         )
 
     bot: Bot = Bot(token=config.Bot.tg_bot_token, parse_mode='HTML', session=session)
