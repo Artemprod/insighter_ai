@@ -22,7 +22,8 @@ from states.summary_from_audio import FSMSummaryFromAudioScenario
 
 # Повесить мидлварь только на этот роутер
 router = Router()
-
+env: Env = Env()
+env.read_env('.env')
 
 @router.callback_query(AssistantCallbackFactory.filter())
 async def processed_gen_answer(callback: CallbackQuery,
@@ -177,7 +178,10 @@ async def processed_do_ai_conversation(message: Message, bot: Bot,
                                                           model=await GPTModelManager().get_current_gpt_model_in_use_from_env())
 
         meta_information = {
-
+            'ai_model': {
+                'summary_model': env('MODEL_VERSION'),
+                'transcribe_model': env('WHISPER_MODEL_VERSION'),
+            },
             'costs': {
                 'whisper': whisper_cost,
                 'gpt': gpt_cost,
