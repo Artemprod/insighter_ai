@@ -1,10 +1,16 @@
+import asyncio
 import datetime
 import hashlib
 import logging
 import os
 import random
+
+from environs import Env
 from mongoengine import connect
-from DB.Mongo.mongo_enteties import Assistant, User
+from DB.Mongo.mongo_enteties import Assistant, User, Tariff, Transactions
+from config.bot_configs import MongoDB
+
+from lexicon.LEXICON_RU import TARIFFS
 
 
 class MongoORMConnection:
@@ -97,25 +103,28 @@ class MongoUserRepoORM:
     async def check_user_in_db(tg_id):
         return User.objects(tg_id=tg_id).first() is not None
 
+    # TODO вынести количесвто попыток при старте в конфиги
     @staticmethod
     async def save_new_user(tg_username,
                             name,
                             tg_id,
+                            tg_link,
                             attempts=3,
                             money=0,
-                            minutes=180):
+                            seconds=6000):
         new_user: User = User(
             tg_username=tg_username,
+            tg_link=tg_link,
             name=name,
             tg_id=tg_id,
             attempts=attempts,
             money_balance=money,
-            time_balance=minutes * 60,
+            time_balance=seconds,
             documents={},
             registration_date=datetime.datetime.now(),
             payment_history={f'{datetime.datetime.now()}': 0},
         )
-        print()
+
         try:
             new_user.save()
             logging.info(f'Новый пользователь сохранен в базе {tg_username}, {name}, {tg_id}')
@@ -125,7 +134,8 @@ class MongoUserRepoORM:
             print(e, f"Ошибка в сохранение новго пользователя {tg_username}, {name}, {tg_id}")
 
     @staticmethod
-    def add_attempts(tg_id, new_value):
+    def add_attempts(tg_id,
+                     new_value):
         user: User = User.objects(tg_id=tg_id).get()
         user.attempts = new_value
         try:
@@ -194,7 +204,8 @@ class UserDocsRepoORM:
             raise ValueError(f"Документ с ID {doc_id} не найден")
         return doc
 
-    async def create_new_doc(self, tg_id) -> str:
+    async def create_new_doc(self,
+                             tg_id) -> str:
         document = {
             "date": datetime.datetime.now().strftime("%d_%B_%Y_%H_%M_%S"),
         }
@@ -210,12 +221,30 @@ class UserDocsRepoORM:
             raise  # Пробрасываем исключение
 
     @staticmethod
-    async def save_new_transcribed_text(tg_id, doc_id, transcribed_text):
+    async def save_new_transcribed_text(tg_id,
+                                        doc_id,
+                                        transcribed_text):
         user: User = User.objects(tg_id=tg_id).get()
         doc = user.documents.get(doc_id)
         if doc is None:
             raise ValueError(f"Документ с ID {doc_id} не найден")
         doc['transcription'] = transcribed_text
+        try:
+            user.save()
+            logging.info("Транскрибированный текст сохранен")
+        except Exception as e:
+            logging.error(e)
+            raise
+
+    @staticmethod
+    async def add_meta_information(tg_id,
+                                   doc_id,
+                                   info: dict):
+        user: User = User.objects(tg_id=tg_id).get()
+        doc = user.documents.get(doc_id)
+        if doc is None:
+            raise ValueError(f"Документ с ID {doc_id} не найден")
+        doc['meta_data'] = info
         try:
             user.save()
             logging.info("Транскрибированный текст сохранен")
@@ -256,6 +285,16 @@ class UserDocsRepoORM:
         hash_object = hashlib.sha256(random_bytes)
         return hash_object.hexdigest()[:length]
 
+    @staticmethod
+    async def update_user_page(tg_id: int,
+                               current_page: int):
+        user: User = User.objects(tg_id=tg_id).get()
+        user.document_current_page = current_page
+        try:
+            user.save()
+        except Exception as e:
+            logging.exception(f"failed to update current doc page {e}")
+
 
 class UserBalanceRepoORM:
     @staticmethod
@@ -285,13 +324,13 @@ class UserBalanceRepoORM:
         user.time_balance -= time_to_subtract
         user.time_balance = round(user.time_balance)
         user.save()
+
     @staticmethod
     async def add_user_money_balance(tg_id,
                                      money):
         user: User = User.objects(tg_id=tg_id).get()
         user.money_balance += money
         user.save()
-
 
     @staticmethod
     async def money_to_minutes(amount, exchange_rate=1):
@@ -309,8 +348,151 @@ class UserBalanceRepoORM:
         return int(amount * exchange_rate)
 
 
+class TariffRepoORM:
+    @staticmethod
+    async def get_tariff_price_by_name(tariff_name: str):
+        tariff: Tariff = Tariff.objects(tariff_name=tariff_name).get()
+        return tariff.price
+
+    @staticmethod
+    async def get_tariff_info_by_name(tariff_name: str) -> Tariff:
+        tariff: Tariff = Tariff.objects(tariff_name=tariff_name).get()
+        return tariff
+
+    # TODO: поиск по тарифам не очивилдный оптимизхировать. По какомуц параметру определяются тарифы?
+    @staticmethod
+    async def get_base_tariff() -> Tariff:
+        tariff: Tariff = Tariff.objects(tariff_name=TARIFFS['base']).get()
+        return tariff
+
+    @staticmethod
+    async def get_standard_tariff() -> Tariff:
+        tariff: Tariff = Tariff.objects(tariff_name=TARIFFS['standard']).get()
+        return tariff
+
+    @staticmethod
+    async def get_premium_tariff() -> Tariff:
+        tariff: Tariff = Tariff.objects(tariff_name=TARIFFS['premium']).get()
+        return tariff
+
+    @staticmethod
+    async def add_new_tariff(tariff_name,
+                             label,
+                             price,
+                             minutes,
+                             currency):
+        tariff = Tariff(
+            tariff_name=tariff_name,
+            currency=currency,
+            label=label,
+            price=price,
+            minutes=minutes,
+        )
+        tariff.save()
+
+
+class TransactionRepoORM:
+    @staticmethod
+    async def create_transaction_from_successful_payment(
+            tg_user_id,
+            name,
+            amount,
+            tariff,
+
+            status,
+            currency,
+            invoice_payload,
+            provider_payment_charge_id,
+            telegram_payment_charge_id) -> Transactions:
+        """
+        Функция создаёт объект транзакции из данных успешного платежа.
+
+        Args:
+            telegram_payment_charge_id:
+            provider_payment_charge_id:
+            invoice_payload:
+            currency:
+            status:
+            tariff:
+            amount:
+            name:
+            tg_user_id:
+            payment_id:
+            date:
+
+        Returns:
+            Объект `Transactions` для записи в базу данных.
+        """
+
+        return Transactions(
+            tg_user_id=tg_user_id,
+            name=name,
+            amount=amount,
+            tariff=tariff,
+            date=datetime.datetime.now(),
+            status=status,
+            currency=currency,
+            invoice_payload=invoice_payload,
+            provider_payment_charge_id=provider_payment_charge_id,
+            telegram_payment_charge_id=telegram_payment_charge_id,
+        )
+
+    async def save_transaction(self,
+                               tg_user_id,
+                               name,
+                               amount,
+                               tariff,
+                               status,
+                               currency,
+                               invoice_payload,
+                               provider_payment_charge_id,
+                               telegram_payment_charge_id, ):
+        try:
+            transaction = await self.create_transaction_from_successful_payment(tg_user_id=tg_user_id,
+                                                                                name=name,
+                                                                                amount=amount,
+                                                                                tariff=tariff,
+                                                                                status=status,
+                                                                                currency=currency,
+                                                                                invoice_payload=invoice_payload,
+                                                                                provider_payment_charge_id=provider_payment_charge_id,
+                                                                                telegram_payment_charge_id=telegram_payment_charge_id
+                                                                                )
+        except Exception as e:
+            logging.exception(f'Failed to form transaction object {e}')
+            raise e
+        try:
+            transaction.save()
+        except Exception as e:
+            logging.exception(f"failed to save transaction {e}")
+            raise e
+
+
 if __name__ == '__main__':
-    # c = MongoORMConnection(config_data.data_base)
+    async def main():
+        env: Env = Env()
+        env.read_env('.env')
+
+        bd = MongoDB(bd_name=env('DATABASE'),
+                     local_port=env('MONGO_DB_LOCAL_PORT'),
+                     local_host=env('MONGO_DB_LOCAL_HOST'),
+                     docker_port=(env('MONGO_DB_DOCKER_PORT')),
+                     docker_host=(env('MONGO_DB_DOCKER_HOST')),
+                     )
+        MongoORMConnection(bd, system_type='local')
+        # a = TariffRepoORM()
+        # await a.add_new_tariff(
+        #     tariff_name='base',
+        #     label='Базовый тариф',
+        #     price=990,
+        #     minutes=200,
+        #     currency='RUB',
+        # )
+
+
+
+    asyncio.run(main())
+
     # assistant = Assistant(
     #     assistant="product_manager",
     #     name="Асистент продатк менеджера",
@@ -332,4 +514,3 @@ if __name__ == '__main__':
     # repo.create_new_assistants(assistant)
     # repo.create_new_assistants(assistant_2)
     # repo.get_all_assistants()
-    print()

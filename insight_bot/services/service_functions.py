@@ -12,7 +12,7 @@ from aiogram.types import Message, ContentType, Audio
 from aiogram import Bot
 
 from DB.Mongo.mongo_db import MongoAssistantRepositoryORM, UserBalanceRepoORM
-from DB.Mongo.mongo_enteties import Assistant
+from DB.Mongo.mongo_enteties import Assistant, Transactions
 from api.gpt import GPTAPIrequest
 import os
 from abc import ABC, abstractmethod
@@ -161,7 +161,26 @@ async def from_pipeline_data_object(
         file_duration=file_duration,
         additional_system_information=additional_system_information,
         additional_user_information=additional_user_information,
+        process_time={}
     )
+
+
+async def generate_telegram_user_link(username,
+                                      user_tg_id) -> str:
+    """
+    Функция генерирует ссылку на Telegram пользователя.
+
+    Args:
+        user: Объект `types.User` от aiogram.
+
+    Returns:
+        Ссылка на Telegram пользователя.
+    """
+
+    if username:
+        return f"https://t.me/{username}"
+    else:
+        return f"tg://user?id={user_tg_id}"
 
 
 async def form_content(summary: str,
@@ -203,9 +222,11 @@ async def estimate_transcribe_duration(message: Message):
     else:
         pass
 
-async def compare_user_minutes_and_file(user_tg_id, file_duration, user_balance_repo:UserBalanceRepoORM):
+
+async def compare_user_minutes_and_file(user_tg_id, file_duration, user_balance_repo: UserBalanceRepoORM):
     user_time_balance = await user_balance_repo.get_user_time_balance(tg_id=user_tg_id)
     return user_time_balance - file_duration
+
 
 async def estimate_media_duration_in_minutes(bot: Bot,
                                              message: Message):
@@ -271,6 +292,127 @@ async def num_tokens_from_string(string: str,
         return num_tokens
     except Exception as e:
         logging.exception(e)
+
+
+# async def calculate_gpt_cost(input_text,
+#                              response_text,
+#                              model='gpt-3.5-turbo-16k-0613'):
+#     model_cost_mapping = {
+#         "gpt-4": 0.03,
+#         "gpt-4-completion": 0.06,
+#         "gpt-3.5-turbo": 0.002,
+#         "gpt-3.5-turbo-16k-0613": 0.002,
+#     }
+#
+#     # Получаем кодировку для модели с использованием tiktoken
+#     encoding = tiktoken.encoding_for_model(model)
+#
+#     # Подсчитываем количество токенов для входного и выходного текста
+#     prompt_tokens = len(encoding.encode(input_text))
+#     completion_tokens = len(encoding.encode(response_text))
+#
+#     # Определяем цену за токен исходя из модели
+#     base_cost_per_token = model_cost_mapping.get(model, None)
+#     if base_cost_per_token is None:
+#         raise ValueError(f"Unknown model: {model}. Please provide a valid OpenAI model name.")
+#
+#     # Считаем общую стоимость, учитывая количество токенов для запроса и ответа
+#     total_cost = ((prompt_tokens + completion_tokens) * base_cost_per_token) / 1000  # предполагаем цену за 1000 токенов
+#     return round(total_cost, 6)
+
+async def get_openai_model_cost_table(model_name='gpt-3.5-turbo', is_completion=False):
+    model_cost_mapping = {
+        "gpt-4": 0.03,
+        "gpt-4-0314": 0.03,
+        "gpt-4-completion": 0.06,
+        "gpt-4-0314-completion": 0.06,
+        "gpt-4-32k": 0.06,
+        "gpt-4-32k-0314": 0.06,
+        "gpt-4-32k-completion": 0.12,
+        "gpt-4-32k-0314-completion": 0.12,
+        "gpt-3.5-turbo": 0.002,
+        "gpt-3.5-turbo-0301": 0.002,
+        "gpt-3.5-turbo-16k-0613": 0.002,
+        "text-ada-001": 0.0004,
+        "ada": 0.0004,
+        "text-babbage-001": 0.0005,
+        "babbage": 0.0005,
+        "text-curie-001": 0.002,
+        "curie": 0.002,
+        "text-davinci-003": 0.02,
+        "text-davinci-002": 0.02,
+        "code-davinci-002": 0.02,
+    }
+    cost = model_cost_mapping.get(
+        model_name.lower()
+        + ("-completion" if is_completion and model_name.startswith("gpt-4") else ""),
+        None,
+    )
+    if cost is None:
+        raise ValueError(
+            f"Unknown model: {model_name}. Please provide a valid OpenAI model name."
+            "Known models are: " + ", ".join(model_cost_mapping.keys())
+        )
+    return cost
+
+
+async def calculate_gpt_cost_with_tiktoken(input_text,
+                                           response_text,
+                                           model='gpt-3.5-turbo-16k-0613'):
+    # Получаем кодировку для модели
+    encoding = tiktoken.encoding_for_model(model)
+
+    # Получаем стоимость токена для модели и завершающего ответа
+    prompt_cost_per_token = await get_openai_model_cost_table(model_name=model, is_completion=False)
+    completion_cost_per_token = await get_openai_model_cost_table(model_name=model, is_completion=True)
+
+    # Подсчитываем количество токенов
+    prompt_tokens = len(encoding.encode(input_text))
+    completion_tokens = len(encoding.encode(response_text))
+
+    # Рассчитываем общую стоимость
+    prompt_cost = (prompt_tokens * prompt_cost_per_token) / 1000
+    completion_cost = (completion_tokens * completion_cost_per_token) / 1000
+
+    total_cost = prompt_cost + completion_cost
+    return round(total_cost, 6)
+
+
+async def calculate_whisper_cost(duration_sec,
+                                 model='base',
+                                 quality='standard'):
+    """
+    Функция для расчета стоимости использования Whisper API в зависимости
+    от модели, длительности и качества аудио.
+
+    :param model: Модель Whisper ('base', 'advanced').
+    :param quality: Качество аудио ('standard', 'high').
+    :return: Возвращает общую стоимость обработки аудио.
+
+        duration_sec:
+    """
+
+    model_multiplier = {
+        'base': 1,
+        'advanced': 1.5  # Предположим, что продвинутая модель дороже на 50%
+    }
+
+    quality_multiplier = {
+        'standard': 1,
+        'high': 1.2  # Предположим, что высокое качество дороже на 20%
+    }
+
+    # Базовая ставка за минуту
+    base_rate_per_sec = 0.0001  # $0.0001 за секунду
+
+    # Рассчитываем множители модели и качества
+    model_mult = model_multiplier.get(model, 1)
+    quality_mult = quality_multiplier.get(quality, 1)
+
+    # Итоговая стоимость
+    total_cost = duration_sec * base_rate_per_sec * model_mult * quality_mult
+
+    return round(total_cost, 4)  # Округляем до четырех знаков после запятой
 
 
 if __name__ == '__main__':

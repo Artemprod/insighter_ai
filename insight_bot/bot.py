@@ -6,11 +6,12 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.telegram import TelegramAPIServer
 from aiogram.fsm.storage.redis import RedisStorage, Redis
 
-from handlers import command_handler, docs_handlers, process_file_handler
+from handlers import command_handler, docs_handlers, process_file_handler, payment_handler
 from enteties.queue_entity import PipelineQueues
 from main_process.process_pipline import ProcesQueuePipline
 from insiht_bot_container import assistant_repository, config_data, user_repository, document_repository, progress_bar, \
-    server_file_manager, text_invoker, gpt_dispatcher, file_format_manager, user_balance_repo
+    server_file_manager, text_invoker, gpt_dispatcher, file_format_manager, user_balance_repo, transaction_repository, \
+    tariff_repository, gpt_dispatcher_only_longcahin
 
 from keyboards.main_menu import set_main_menu
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -35,7 +36,9 @@ async def create_bot(queue_pipeline) -> None:
             document_repository=document_repository,
             process_queue=queue_pipeline,
             progress_bar=progress_bar,
-            user_balance_repo=user_balance_repo
+            user_balance_repo=user_balance_repo,
+            transaction_repository=transaction_repository,
+            tariff_repository=tariff_repository
         )
 
     elif system_type == "docker":
@@ -50,7 +53,9 @@ async def create_bot(queue_pipeline) -> None:
             document_repository=document_repository,
             process_queue=queue_pipeline,
             progress_bar=progress_bar,
-            user_balance_repo=user_balance_repo
+            user_balance_repo=user_balance_repo,
+            transaction_repository=transaction_repository,
+            tariff_repository=tariff_repository
 
         )
 
@@ -61,6 +66,7 @@ async def create_bot(queue_pipeline) -> None:
     dp.include_router(command_handler.router)
     dp.include_router(process_file_handler.router)
     dp.include_router(docs_handlers.router)
+    dp.include_router(payment_handler.router)
     dp.update.outer_middleware(CheckAttemptsMiddleware(user_repository=user_repository,
                                                        balance_repo=user_balance_repo))
 
@@ -76,7 +82,7 @@ async def create_pipline_processes(queue_pipeline) -> None:
         database_document_repository=document_repository,
         server_file_manager=server_file_manager,
         text_invoker=text_invoker,
-        ai_llm_request=gpt_dispatcher,
+        ai_llm_request=gpt_dispatcher_only_longcahin,
         format_definer=file_format_manager,
         progress_bar=progress_bar,
         config_data=config_data

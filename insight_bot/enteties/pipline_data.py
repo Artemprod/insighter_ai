@@ -7,11 +7,14 @@ from aiogram.fsm.context import FSMContext
 
 @dataclass
 class PipelineData:
+
     telegram_message: aiogram.types.Message
     telegram_bot: aiogram.Bot
     assistant_id: str
     fsm_bot_state: FSMContext
     file_duration: float
+    process_time: dict
+    file_type: Optional[str] = None
     additional_system_information: Optional[str] = None
     additional_user_information: Optional[str] = None
     file_path: Optional[str] = None

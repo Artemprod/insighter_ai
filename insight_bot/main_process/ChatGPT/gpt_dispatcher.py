@@ -1,7 +1,8 @@
 import asyncio
-
+from abc import ABC, abstractmethod
 import logging
 import os
+from functools import partial
 
 # import spacy
 # from langchain.text_splitter import SpacyTextSplitter
@@ -21,15 +22,12 @@ from costume_excepyions.ai_exceptions import CharactersInTokenMeasurement, GptAp
     LoadingLongRequestMethodError, LoadingShortRequestMethodError, CompileRequestError, GeneratingDataForModelError, \
     TokenCapacityMeasurement
 
-
 from main_process.ChatGPT.gpt_enteties import AssistantInWork
 from main_process.ChatGPT.gpt_message import GPTMessage, GPTRole
 from main_process.ChatGPT.gpt_models_information import GPTModelManager
 from main_process.ChatGPT.gpt_options import GPTOptions
 from main_process.ChatGPT.openai_chat_complain import GPTClient
 from main_process.func_decorators import ameasure_time
-
-
 
 
 class TextTokenizer:
@@ -173,7 +171,8 @@ class RequestGPTWorker:
         :param user_id:
         :return: asssistant
         """
-        assistant_prompt: Assistant = await self.__assistant_repositorysitory.get_one_assistant(assistant_id=assistant_id)
+        assistant_prompt: Assistant = await self.__assistant_repositorysitory.get_one_assistant(
+            assistant_id=assistant_id)
         return assistant_prompt
 
     async def load_gpt(self) -> GPTClient:
@@ -235,7 +234,7 @@ class RequestGPTWorker:
                                       additional_user_information: str) -> GPTMessage:
         prompt = await self.insert_additional_information_if_exists(prompt=user_prompt,
                                                                     information=additional_user_information)
-        message = GPTMessage(role=GPTRole.USER, content=f' {prompt} -> "{income_text}" ')
+        message = GPTMessage(role=GPTRole.USER, content=f' {prompt}. Вот текст записи: -> "{income_text}" ')
         return message
 
     @staticmethod
@@ -312,26 +311,6 @@ class BigDataGPTWorker(RequestGPTWorker):
                                             chunk_overlap=chunk_overlap)
             return text_spliter
 
-    # async def __init_spacy_text_spliter(self) -> SpacyTextSplitter:
-    #     chunk_size = await self.__init_chunk_size()
-    #     chunk_overlap = round(chunk_size * 0.3)
-    #     try:
-    #         # TODO вынести в отдельные настройки настройки модели
-    #         spacy.load("ru_core_news_sm")
-    #         text_splitter = SpacyTextSplitter(chunk_size=chunk_size,
-    #                                           chunk_overlap=chunk_overlap,
-    #                                           pipeline="ru_core_news_sm"
-    #                                           )
-    #         return text_splitter
-    #     except IOError as e:
-    #         logging.exception("Model 'ru_core_news_sm' not installed or inaccessible:", e)
-    #         spacy.cli.download("ru_core_news_sm")
-    #         spacy.load("ru_core_news_sm")
-    #         text_splitter = SpacyTextSplitter(chunk_size=chunk_size,
-    #                                           chunk_overlap=chunk_overlap,
-    #                                           pipeline="ru_core_news_sm")
-    #         return text_splitter
-
     async def __init_recursive_text_spliter(self) -> RecursiveCharacterTextSplitter:
         chunk_size = await self.__init_chunk_size()
         chunk_overlap = round(chunk_size * 0.15)
@@ -342,7 +321,6 @@ class BigDataGPTWorker(RequestGPTWorker):
     async def get_text_chunks_langchain(
             text):
         return [Document(page_content=text)]
-
 
     @ameasure_time
     async def make_gpt_request(
@@ -370,34 +348,28 @@ class BigDataGPTWorker(RequestGPTWorker):
         temperature = await self.model_manager.get_gpt_model_tempreture()
         return model, temperature
 
-    @ameasure_time
-    async def __make_long_text(
-            self,
-            string: str,
-            assistant_in_work: AssistantInWork
-    ):
-
+    async def __make_map_reduce(self, assistant_in_work):
         model, temperature = await self.__init_model_parametrs()
         llm = ChatOpenAI(temperature=temperature,
                          model_name=model)
         # Map
         map_template = f"""
-        {assistant_in_work.system_prompt}
-        {assistant_in_work.additional_system_information if assistant_in_work.additional_system_information else ""}
-        {assistant_in_work.additional_user_information if assistant_in_work.additional_user_information else ""}
-        {assistant_in_work.user_prompt_for_chunks}:
-        ->{'{docs}'}
-        ответ на русском :"""
+                {assistant_in_work.system_prompt}
+                {assistant_in_work.additional_system_information if assistant_in_work.additional_system_information else ""}
+                {assistant_in_work.additional_user_information if assistant_in_work.additional_user_information else ""}
+                {assistant_in_work.user_prompt_for_chunks}:
+                ->{'{docs}'}
+                ответ на русском :"""
         map_prompt = PromptTemplate.from_template(map_template)
         map_chain = LLMChain(llm=llm, prompt=map_prompt)
         # Reduce
         reduce_template = f""" 
-        {assistant_in_work.system_prompt}
-        {assistant_in_work.additional_system_information if assistant_in_work.additional_system_information else ""}
-        {assistant_in_work.additional_user_information if assistant_in_work.additional_user_information else ""}
-        {assistant_in_work.main_user_prompt}:
-        ->{'{docs}'}
-        ответ на русском:"""
+                {assistant_in_work.system_prompt}
+                {assistant_in_work.additional_system_information if assistant_in_work.additional_system_information else ""}
+                {assistant_in_work.additional_user_information if assistant_in_work.additional_user_information else ""}
+                {assistant_in_work.main_user_prompt}:
+                ->{'{docs}'}
+                ответ на русском:"""
         reduce_prompt = PromptTemplate.from_template(reduce_template)
         # Run chain
         reduce_chain = LLMChain(llm=llm, prompt=reduce_prompt)
@@ -426,11 +398,30 @@ class BigDataGPTWorker(RequestGPTWorker):
             # Return the results of the map steps in the output
             return_intermediate_steps=False,
         )
+
+        return map_reduce_chain
+
+    async def split_text(self,
+                         string):
         text_splitter = await self.__init_recursive_text_spliter()
         get_doc_chunks = await self.get_text_chunks_langchain(string)
         split_docs = text_splitter.split_documents(get_doc_chunks)
-        result = await map_reduce_chain.arun(split_docs)
-        return result
+        return split_docs
+
+    async def __make_long_text(self, string, assistant_in_work: AssistantInWork):
+        split_docs_task = asyncio.create_task(self.split_text(string))
+        map_reduce_chain_task = asyncio.create_task(self.__make_map_reduce(assistant_in_work=assistant_in_work))
+        split_docs, map_reduce_chain = await asyncio.gather(split_docs_task, map_reduce_chain_task)
+        loop = asyncio.get_running_loop()
+        try:
+            result = await loop.run_in_executor(
+                None,  # Использует ThreadPoolExecutor по умолчанию
+                partial(map_reduce_chain.run,
+                        split_docs)
+            )
+            return result
+        except Exception as e:
+            logging.exception("Ошибка при выполнении __make_long_text:", exc_info=e)
 
     @ameasure_time
     async def generate_data(self,
@@ -454,8 +445,14 @@ class BigDataGPTWorker(RequestGPTWorker):
         )
 
 
+class IGPTDispatcher(ABC):
+    @abstractmethod
+    async def compile_request(self, *args, **kwargs):
+        pass
+
+
 # noinspection PyCompatibility
-class GPTDispatcher:
+class GPTDispatcher(IGPTDispatcher):
 
     def __init__(self,
                  token_sizer: TextTokenizer,
@@ -514,4 +511,37 @@ class GPTDispatcher:
                 raise LoadingShortRequestMethodError(message="Failed to load usual short request method", exception=e)
 
 
+class GPTDispatcherOnlyLonghain(IGPTDispatcher):
+    def __init__(self,
 
+                 long_request_gpt: BigDataGPTWorker,
+                 ):
+
+        self.__long_request_gpt = long_request_gpt
+
+    async def compile_request(self, assistant_id,
+                              income_text: str,
+                              additional_system_information: str = None,
+                              additional_user_information: str = None):
+        """
+        Run a request to chat GPT depending on text's token size
+        if token capacity larger than GPT model maximum capacity ir uses long realization if less usual
+        :param additional_user_information:
+        :param additional_system_information:
+        :param income_text:
+        :param assistant_id:
+        :param text:
+        :return:
+        """
+        try:
+
+            result = await self.__long_request_gpt.make_gpt_request(assistant_id=assistant_id,
+                                                                    income_text=income_text,
+                                                                    additional_system_information=additional_system_information,
+                                                                    additional_user_information=additional_user_information,
+                                                                    )
+            logging.info("successful api request from dispatcher")
+            return result
+        except GptApiRequestError as e:
+            logging.exception(f'Failed to make request, exception is: {e.exception}')
+            raise CompileRequestError

@@ -1,8 +1,9 @@
 from DB.Mongo.mongo_db import MongoORMConnection, MongoAssistantRepositoryORM, MongoUserRepoORM, UserDocsRepoORM, \
-    UserBalanceRepoORM
+    UserBalanceRepoORM, TransactionRepoORM, TariffRepoORM
 from api.progress_bar.command import ProgressBarClient
 from config.bot_configs import load_bot_config, Config
-from main_process.ChatGPT.gpt_dispatcher import TextTokenizer, OneRequestGPTWorker, BigDataGPTWorker, GPTDispatcher
+from main_process.ChatGPT.gpt_dispatcher import TextTokenizer, OneRequestGPTWorker, BigDataGPTWorker, GPTDispatcher, \
+    GPTDispatcherOnlyLonghain
 from main_process.ChatGPT.gpt_models_information import GPTModelManager
 from main_process.Whisper.openai_whisper_complain import WhisperClient
 from main_process.Whisper.whisper_dispatcher import ShortMediaFilesTranscriber, LongMediaFilesTranscriber, \
@@ -22,11 +23,13 @@ formats = FORMATS()
 config_data: Config = load_bot_config('.env')
 # ______DATABASE ____________________________________________
 
-MongoORMConnection(config_data.data_base, system_type=config_data.system.system_type)
+mongo_connection = MongoORMConnection(config_data.data_base, system_type=config_data.system.system_type)
 assistant_repository = MongoAssistantRepositoryORM()
 user_repository = MongoUserRepoORM()
 document_repository = UserDocsRepoORM()
 user_balance_repo = UserBalanceRepoORM()
+transaction_repository = TransactionRepoORM()
+tariff_repository = TariffRepoORM()
 
 # ______PROGRESSBAR____________________________________________
 progress_bar = ProgressBarClient()
@@ -68,6 +71,10 @@ gpt_dispatcher = GPTDispatcher(
     token_sizer=tokenizer,
     model_manager=gpt_model_manager,
     one_request_gpt=one_request_gpt,
+    long_request_gpt=long_request_gpt,
+)
+gpt_dispatcher_only_longcahin = GPTDispatcherOnlyLonghain(
+
     long_request_gpt=long_request_gpt,
 )
 

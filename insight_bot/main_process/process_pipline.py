@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from asyncio import Queue
 from typing import Optional
 
@@ -34,7 +35,7 @@ class ProcesQueuePipline:
                  format_definer: FileFormatDefiner,
                  progress_bar: ProgressBarClient,
                  ai_llm_request: GPTDispatcher,
-                 config_data:Config):
+                 config_data: Config):
         self.__database_document_repository = database_document_repository
         self.__server_file_manager = server_file_manager
         self.__text_invoker = text_invoker
@@ -55,6 +56,8 @@ class ProcesQueuePipline:
         """
 
         data: PipelineData = await income_items_queue.get()
+        data.process_time.setdefault('produce_file_path', dict())
+        data.process_time['produce_file_path']['start_time'] = time.time()
         print('запуск в пайплане первый воркер', data)
         message: aiogram.types.Message = data.telegram_message
         bot: aiogram.Bot = data.telegram_bot
@@ -75,6 +78,7 @@ class ProcesQueuePipline:
         try:
             file_path = await file_path_coro
             income_file_format = await self.__format_definer.define_format(file_path=file_path)
+            data.file_type = income_file_format
             if income_file_format in self.__text_invoker.formats.make_list_of_formats():
                 data.file_path = file_path
                 print(f"Производитель путей файлов: добавил {data}")
@@ -87,6 +91,17 @@ class ProcesQueuePipline:
 
                 await invoke_text_queue.put(data)
                 income_items_queue.task_done()
+
+                document_id: str = await self.__database_document_repository.create_new_doc(
+                    tg_id=data.telegram_message.from_user.id)
+                # save document id in pipline_data
+                data.debase_document_id = document_id
+                data.process_time['produce_file_path']['finished_time'] = time.time()
+                data.process_time['produce_file_path']['total_time'] = \
+                    data.process_time['produce_file_path']['finished_time'] - \
+                    data.process_time['produce_file_path']['start_time']
+
+
             else:
                 await bot.delete_message(message_id=begin_message.message_id, chat_id=begin_message.chat.id)
                 message = await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
@@ -116,6 +131,8 @@ class ProcesQueuePipline:
         """
         while True:
             data: PipelineData = await invoke_text_queue.get()
+            data.process_time.setdefault('invoke_text', dict())
+            data.process_time['invoke_text']['start_time'] = time.time()
             print(f"Получил данные для извлечения текста {data}")
             path_to_file = data.file_path
             print("Путь до файла", path_to_file)
@@ -129,10 +146,7 @@ class ProcesQueuePipline:
                     data.transcribed_text = invoked_text
                     # TODO: Подумать как вынести ( тут зависимости от реализации )
                     try:
-                        document_id: str = await self.__database_document_repository.create_new_doc(
-                            tg_id=data.telegram_message.from_user.id)
-                        # save document id in pipline_data
-                        data.debase_document_id = document_id
+                        document_id = data.debase_document_id
                         await self.__database_document_repository.save_new_transcribed_text(
                             tg_id=data.telegram_message.chat.id,
                             doc_id=document_id,
@@ -146,6 +160,10 @@ class ProcesQueuePipline:
                         await gen_answer_queue.put(data)
                         await transcribed_text_sender_queue.put(data)
                         invoke_text_queue.task_done()
+                        data.process_time['invoke_text']['finished_time'] = time.time()
+                        data.process_time['invoke_text']['total_time'] = \
+                            data.process_time['invoke_text']['finished_time'] - \
+                            data.process_time['invoke_text']['start_time']
                 else:
                     logging.error('No recognized text')
                     return None
@@ -161,6 +179,8 @@ class ProcesQueuePipline:
                                       result_dispatching_queue: Queue):
         while True:
             data: PipelineData = await gen_answer_queue.get()
+            data.process_time.setdefault('generate_summary_answer', dict())
+            data.process_time['generate_summary_answer']['start_time'] = time.time()
             print(f'Получил данные для генерации текста {data}')
             print(f'Вот препроцессинг текст {data.preprocessed_text}')
             # text_to_summary = data.preprocessed_text
@@ -185,8 +205,12 @@ class ProcesQueuePipline:
                     finally:
                         await result_dispatching_queue.put(data)
                         gen_answer_queue.task_done()
+                        data.process_time['generate_summary_answer']['finished_time'] = time.time()
+                        data.process_time['generate_summary_answer']['total_time'] = \
+                        data.process_time['generate_summary_answer']['finished_time'] - \
+                        data.process_time['generate_summary_answer']['start_time']
                 else:
-                    logging.error("No summary")
+                    logging.exception("No summary")
                     return None
 
             else:
@@ -194,7 +218,6 @@ class ProcesQueuePipline:
                 await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                      text=LEXICON_RU['error_message'])
                 raise AttributeError
-
 
     @staticmethod
     def create_tasks(number_of_workers,
