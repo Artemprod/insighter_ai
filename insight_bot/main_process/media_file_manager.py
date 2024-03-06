@@ -27,12 +27,17 @@ class MediaFileManager:
         size_mb = size_bytes / (1024 * 1024)  # Преобразование из байтов в мегабайты
         return size_mb
 
-    async def export_segment_async(self, segment, saving_path, media_format="mp3"):
+    async def export_segment_async(self,
+                                   segment,
+                                   saving_path,
+                                   ):
         loop = asyncio.get_running_loop()
         try:
             result = await loop.run_in_executor(
                 None,
-                partial(self.export_segment, segment, saving_path, media_format)
+                partial(self.export_segment,
+                        segment,
+                        saving_path,)
             )
             return result
         except Exception as e:
@@ -40,20 +45,30 @@ class MediaFileManager:
             return None
 
     @staticmethod
-    def export_segment(segment, saving_path, media_format="mp3"):
-        segment.export(saving_path, format=media_format)
-        print(f"Exported segment to {saving_path}")
-        return saving_path
+    def export_segment(segment,
+                       saving_path,
+                       ):
+        try:
+            print()
+            segment.export(saving_path)
+            print(f"Exported segment to {saving_path}")
+            return saving_path
+        except Exception as e:
+            logging.exception(e)
+            print(e, 'Error export')
 
     async def process_audio_segments(self, audio_file_path, output_directory_path):
         media_format = await self.__format_manager.define_format(file_path=audio_file_path)
+        print(media_format)
         audio = AudioSegment.from_file(audio_file_path, format=media_format)
+        print()
         semaphore = asyncio.Semaphore(10)  # Control concurrency
         segment_length = 10 * 60 * 1000  # 10 minutes in milliseconds
-        tasks = [self.limit_task(semaphore, self.export_segment_async,
+        tasks = [self.limit_task(semaphore,
+                                 self.export_segment_async,
                                  audio[i:i + segment_length],
                                  os.path.join(output_directory_path, f"chunk_{i // segment_length}.{media_format}"),
-                                 media_format)
+                                 )
                  for i in range(0, len(audio), segment_length)]
 
         return await asyncio.gather(*tasks)
