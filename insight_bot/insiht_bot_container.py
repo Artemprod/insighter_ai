@@ -12,6 +12,7 @@ from main_process.Whisper.whisper_information import WhisperModelManager
 from main_process.file_format_manager import TelegramServerFileFormatDefiner
 from main_process.file_manager import TelegramMediaFileManager, ServerFileManager
 from main_process.media_file_manager import MediaFileManager
+from main_process.post_ptocessing import PostProcessor
 # from main_process.pre_processing import SpacyTextPreprocessor, TextPreprocessorAggregator
 
 from main_process.text_invoke import PdfFileHandler, TxtFileHandler, VideoFileHandler, AudioFileHandler, \
@@ -40,6 +41,10 @@ tokenizer = TextTokenizer()
 # ______PREPROCESSOR____________________________________________
 # default russian language (ru)
 # text_preprocessor = TextPreprocessorAggregator("ru")
+
+# ______POST-PROCESSOR____________________________________________
+whisper_post_processor = PostProcessor()
+
 # ______FILE_MANAGERS____________________________________________
 file_format_manager = TelegramServerFileFormatDefiner()
 server_file_manager = TelegramMediaFileManager()

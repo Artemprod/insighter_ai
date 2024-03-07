@@ -17,6 +17,7 @@ from api.gpt import GPTAPIrequest
 import os
 from abc import ABC, abstractmethod
 
+from costume_excepyions.system_exceptions import SystemTypeError
 from enteties.pipline_data import PipelineData
 
 import re
@@ -24,8 +25,10 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 
-from insiht_bot_container import server_file_manager, config_data
+from insiht_bot_container import server_file_manager, config_data, file_format_manager, text_invoker
+from lexicon.LEXICON_RU import LEXICON_RU
 from main_process.file_manager import ServerFileManager
+from states.summary_from_audio import FSMSummaryFromAudioScenario
 
 
 class IMediaFileManager(ABC):
@@ -147,6 +150,8 @@ async def from_pipeline_data_object(
         assistant_id: str,
         fsm_state: FSMContext,
         file_duration: float,
+        file_path:str,
+        file_type:str,
         additional_system_information=None,
         additional_user_information=None,
 ) -> PipelineData:
@@ -161,7 +166,9 @@ async def from_pipeline_data_object(
         file_duration=file_duration,
         additional_system_information=additional_system_information,
         additional_user_information=additional_user_information,
-        process_time={}
+        process_time={},
+        file_path=file_path,
+        file_type=file_type
     )
 
 
@@ -413,6 +420,43 @@ async def calculate_whisper_cost(duration_sec,
     total_cost = duration_sec * base_rate_per_sec * model_mult * quality_mult
 
     return round(total_cost, 4)  # Округляем до четырех знаков после запятой
+
+
+async def format_filter(message,
+                        bot,
+                        state):
+
+    system = config_data.system.system_type
+    print(system)
+    if system == "docker":
+        file_path_coro = server_file_manager.get_media_file(message=message, bot=bot)
+    elif system == "local":
+        file_path_coro = ServerFileManager().get_media_file(message=message,
+                                                            bot=bot)
+    else:
+        logging.error("Unknown system, add new system")
+        raise SystemTypeError("Unknown system, add new system")
+
+    begin_message = await bot.send_message(chat_id=message.chat.id,
+                                           text=f"Определяю формат файла...")
+    try:
+        file_path = await file_path_coro
+        income_file_format = await file_format_manager.define_format(file_path=file_path)
+        if income_file_format in text_invoker.formats.make_list_of_formats():
+            await bot.delete_message(message_id=begin_message.message_id, chat_id=begin_message.chat.id)
+            return file_path, income_file_format
+        else:
+            await bot.delete_message(message_id=begin_message.message_id, chat_id=begin_message.chat.id)
+            message = await bot.send_message(chat_id=message.chat.id,
+                                                 text=LEXICON_RU['wrong_format'].format(
+                                                     income_file_format=income_file_format,
+                                                     actual_formats=LEXICON_RU['actual_formats'])
+                                                 )
+            await state.update_data(instruction_message_id=message.message_id)
+            await state.set_state(FSMSummaryFromAudioScenario.load_file)
+            return None
+    except Exception as e:
+        logging.exception(e)
 
 
 if __name__ == '__main__':

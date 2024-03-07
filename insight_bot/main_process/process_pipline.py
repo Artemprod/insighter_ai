@@ -18,6 +18,7 @@ from lexicon.LEXICON_RU import LEXICON_RU
 from main_process.ChatGPT.gpt_dispatcher import GPTDispatcher
 from main_process.file_format_manager import FileFormatDefiner
 from main_process.file_manager import TelegramMediaFileManager, ServerFileManager
+from main_process.post_ptocessing import PostProcessor
 
 from main_process.text_invoke import TextInvokeFactory
 from services.service_functions import estimate_transcribe_duration
@@ -32,6 +33,7 @@ class ProcesQueuePipline:
                  database_document_repository: UserDocsRepoORM,
                  server_file_manager: TelegramMediaFileManager,
                  text_invoker: TextInvokeFactory,
+                 post_processor: PostProcessor,
                  format_definer: FileFormatDefiner,
                  progress_bar: ProgressBarClient,
                  ai_llm_request: GPTDispatcher,
@@ -39,6 +41,7 @@ class ProcesQueuePipline:
         self.__database_document_repository = database_document_repository
         self.__server_file_manager = server_file_manager
         self.__text_invoker = text_invoker
+        self.__post_processor = post_processor
         self.__ai_llm_request = ai_llm_request
         self.__queue_pipeline = queue_pipeline
         self.__format_definer = format_definer
@@ -60,57 +63,24 @@ class ProcesQueuePipline:
         data.process_time['produce_file_path']['start_time'] = time.time()
         print('запуск в пайплане первый воркер', data)
         message: aiogram.types.Message = data.telegram_message
-        bot: aiogram.Bot = data.telegram_bot
-        # TODO Использую локальнубю систему сохранения файлов для сервера раскоменить
-        system = self.__config_data.system.system_type
-        print(system)
-        if system == "docker":
-            file_path_coro = self.__server_file_manager.get_media_file(message=message, bot=bot)
-        elif system == "local":
-            file_path_coro = ServerFileManager().get_media_file(message=message,
-                                                                bot=bot)
-        else:
-            logging.error("Unknown system, add new system")
-            raise SystemTypeError("Unknown system, add new system")
 
-        begin_message = await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
-                                                             text=f"Определяю формат файла...")
         try:
-            file_path = await file_path_coro
-            income_file_format = await self.__format_definer.define_format(file_path=file_path)
-            data.file_type = income_file_format
-            if income_file_format in self.__text_invoker.formats.make_list_of_formats():
-                data.file_path = file_path
-                print(f"Производитель путей файлов: добавил {data}")
-                # TODO Переделать логику пока грязно
-                await bot.delete_message(message_id=begin_message.message_id, chat_id=begin_message.chat.id)
-                progres_bar_duration = await estimate_transcribe_duration(message=message)
-                if progres_bar_duration is not None:
-                    await self.progress_bar.start(chat_id=message.from_user.id, time=progres_bar_duration,
-                                                  process_name='распознавание файла ...')
+            progres_bar_duration = await estimate_transcribe_duration(message=message)
+            if progres_bar_duration is not None:
+                await self.progress_bar.start(chat_id=message.from_user.id, time=progres_bar_duration,
+                                              process_name='распознавание файла ...')
 
-                await invoke_text_queue.put(data)
-                income_items_queue.task_done()
+            await invoke_text_queue.put(data)
+            income_items_queue.task_done()
+            document_id: str = await self.__database_document_repository.create_new_doc(
+                tg_id=data.telegram_message.from_user.id)
+            # save document id in pipline_data
+            data.debase_document_id = document_id
+            data.process_time['produce_file_path']['finished_time'] = time.time()
+            data.process_time['produce_file_path']['total_time'] = \
+                data.process_time['produce_file_path']['finished_time'] - \
+                data.process_time['produce_file_path']['start_time']
 
-                document_id: str = await self.__database_document_repository.create_new_doc(
-                    tg_id=data.telegram_message.from_user.id)
-                # save document id in pipline_data
-                data.debase_document_id = document_id
-                data.process_time['produce_file_path']['finished_time'] = time.time()
-                data.process_time['produce_file_path']['total_time'] = \
-                    data.process_time['produce_file_path']['finished_time'] - \
-                    data.process_time['produce_file_path']['start_time']
-
-
-            else:
-                await bot.delete_message(message_id=begin_message.message_id, chat_id=begin_message.chat.id)
-                message = await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
-                                                               text=LEXICON_RU['wrong_format'].format(
-                                                                   income_file_format=income_file_format,
-                                                                   actual_formats=LEXICON_RU['actual_formats'])
-                                                               )
-                await data.fsm_bot_state.update_data(instruction_message_id=message.message_id)
-                await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
         except Exception as e:
             await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                  text=LEXICON_RU['error_message'])
@@ -142,8 +112,12 @@ class ProcesQueuePipline:
                     invoked_text = await self.__text_invoker.invoke_text(path_to_file)
                 except EncodingDetectionError as e:
                     logging.exception(e)
+                    await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
+                                                         text=LEXICON_RU['error_message'])
+                    logging.exception(e)
                 if invoked_text:
-                    data.transcribed_text = invoked_text
+                    post_processed_text = await self.__post_processor.remove_redundant_repeats(text=invoked_text)
+                    data.transcribed_text = post_processed_text
                     # TODO: Подумать как вынести ( тут зависимости от реализации )
                     try:
                         document_id = data.debase_document_id
@@ -155,6 +129,9 @@ class ProcesQueuePipline:
                         await asyncos.remove(path_to_file)
                     except Exception as e:
                         logging.exception(e, "cant save recognized text in piplene ", self.__dict__)
+                        await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
+                                                             text=LEXICON_RU['error_message'])
+                        logging.exception(e)
                     finally:
                         print(f"Провел извлевчение {data}")
                         await gen_answer_queue.put(data)
@@ -165,8 +142,11 @@ class ProcesQueuePipline:
                             data.process_time['invoke_text']['finished_time'] - \
                             data.process_time['invoke_text']['start_time']
                 else:
-                    logging.error('No recognized text')
-                    return None
+                    logging.exception(AttributeError, 'No recognized text')
+                    await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
+                                                         text=LEXICON_RU['error_message'])
+                    logging.exception(AttributeError)
+                    raise AttributeError
             else:
                 logging.exception(AttributeError, "No path to file")
                 await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
@@ -210,8 +190,11 @@ class ProcesQueuePipline:
                         data.process_time['generate_summary_answer']['finished_time'] - \
                         data.process_time['generate_summary_answer']['start_time']
                 else:
-                    logging.exception("No summary")
-                    return None
+                    logging.exception(AttributeError, 'No summary')
+                    await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
+                                                         text=LEXICON_RU['error_message'])
+                    logging.exception(AttributeError)
+                    raise AttributeError
 
             else:
                 logging.exception(AttributeError, "No text")

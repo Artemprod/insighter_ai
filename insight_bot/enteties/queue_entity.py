@@ -7,6 +7,7 @@ class PipelineQueues:
         self.income_items_queue = asyncio.Queue()
         self.text_invoke_queue = asyncio.Queue()
         self.text_preprocess_queue = asyncio.Queue()
+        self.text_postprocessor_queue = asyncio.Queue()
         self.text_gen_answer_queue = asyncio.Queue()
         self.result_dispatching_queue = asyncio.Queue()
         self.transcribed_text_sender_queue = asyncio.Queue()

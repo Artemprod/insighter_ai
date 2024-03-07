@@ -11,7 +11,7 @@ from enteties.queue_entity import PipelineQueues
 from main_process.process_pipline import ProcesQueuePipline
 from insiht_bot_container import assistant_repository, config_data, user_repository, document_repository, progress_bar, \
     server_file_manager, text_invoker, gpt_dispatcher, file_format_manager, user_balance_repo, transaction_repository, \
-    tariff_repository, gpt_dispatcher_only_longcahin
+    tariff_repository, gpt_dispatcher_only_longcahin, whisper_post_processor
 
 from keyboards.main_menu import set_main_menu
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -85,7 +85,8 @@ async def create_pipline_processes(queue_pipeline) -> None:
         ai_llm_request=gpt_dispatcher_only_longcahin,
         format_definer=file_format_manager,
         progress_bar=progress_bar,
-        config_data=config_data
+        config_data=config_data,
+        post_processor=whisper_post_processor
     )
     await pipeline_process.run_process()
 
