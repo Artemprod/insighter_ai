@@ -10,7 +10,9 @@ from mongoengine import connect
 from DB.Mongo.mongo_enteties import Assistant, User, Tariff, Transactions
 from config.bot_configs import MongoDB
 
+
 from lexicon.LEXICON_RU import TARIFFS
+from logging_module.log_config import insighter_logger
 
 
 class MongoORMConnection:
@@ -111,7 +113,7 @@ class MongoUserRepoORM:
                             tg_link,
                             attempts=3,
                             money=0,
-                            seconds=6000):
+                            seconds=6000, insighter_insighter_logger=None):
         new_user: User = User(
             tg_username=tg_username,
             tg_link=tg_link,
@@ -127,10 +129,10 @@ class MongoUserRepoORM:
 
         try:
             new_user.save()
-            logging.info(f'Новый пользователь сохранен в базе {tg_username}, {name}, {tg_id}')
+            insighter_insighter_logger.info(f'Новый пользователь сохранен в базе {tg_username}, {name}, {tg_id}')
             print(f'Новый пользователь сохранен в базе {tg_username}, {name}, {tg_id}')
         except Exception as e:
-            logging.error(e, f"Ошибка в сохранение новго пользователя {tg_username}, {name}, {tg_id}")
+            insighter_logger.exception(e, f"Ошибка в сохранение новго пользователя {tg_username}, {name}, {tg_id}")
             print(e, f"Ошибка в сохранение новго пользователя {tg_username}, {name}, {tg_id}")
 
     @staticmethod
@@ -140,10 +142,10 @@ class MongoUserRepoORM:
         user.attempts = new_value
         try:
             user.save()
-            logging.info(f'Попытки добавлены для {user.tg_username}, {user.name}, {user.tg_id}')
+            insighter_logger.info(f'Попытки добавлены для {user.tg_username}, {user.name}, {user.tg_id}')
             print(f'Попытки добавлены для {user.tg_username}, {user.name}, {user.tg_id}')
         except Exception as e:
-            logging.error(e, f"Ошибка в обновлении попыток {user.tg_username}, {user.name}, {user.tg_id}")
+            insighter_logger.exception(e, f"Ошибка в обновлении попыток {user.tg_username}, {user.name}, {user.tg_id}")
             print(e, f"Ошибка в обновлении попыток  {user.tg_username}, {user.name}, {user.tg_id}")
 
     @staticmethod
@@ -153,13 +155,13 @@ class MongoUserRepoORM:
             user.attempts -= 1
             try:
                 user.save()
-                logging.info(f'Попытка вычтена {user.tg_username}, {user.name}, {user.tg_id}')
+                insighter_logger.info(f'Попытка вычтена {user.tg_username}, {user.name}, {user.tg_id}')
                 print(f'Попытка вычтена {user.tg_username}, {user.name}, {user.tg_id}')
             except Exception as e:
-                logging.error(e, f"Ошибка в вычитаниее попыток {user.tg_username}, {user.name}, {user.tg_id}")
+                insighter_logger.exception(e, f"Ошибка в вычитаниее попыток {user.tg_username}, {user.name}, {user.tg_id}")
                 print(e, f"Ошибка в вычитаниее попыток {user.tg_username}, {user.name}, {user.tg_id}")
         else:
-            logging.info(f'0 попыток нужно дбавить  {user.tg_username}, {user.name}, {user.tg_id}')
+            insighter_logger.info(f'0 попыток нужно дбавить  {user.tg_username}, {user.name}, {user.tg_id}')
             print(f'0 попыток нужно дбавить {user.tg_username}, {user.name}, {user.tg_id}')
             return None
 
@@ -173,7 +175,7 @@ class MongoUserRepoORM:
             user.assistant_call.append(data)
             user.save()
         except Exception as e:
-            logging.exception(e, "cant save assistant name")
+            insighter_logger.exception(e, "cant save assistant name")
 
 
 class UserDocsRepoORM:
@@ -214,10 +216,10 @@ class UserDocsRepoORM:
         user.documents.setdefault(doc_id, document)
         try:
             user.save()
-            logging.info(f"Новый документ {doc_id} создан")
+            insighter_logger.info(f"Новый документ {doc_id} создан")
             return doc_id
         except Exception as e:
-            logging.error(e)
+            insighter_logger.exception(e)
             raise  # Пробрасываем исключение
 
     @staticmethod
@@ -231,9 +233,9 @@ class UserDocsRepoORM:
         doc['transcription'] = transcribed_text
         try:
             user.save()
-            logging.info("Транскрибированный текст сохранен")
+            insighter_logger.info("Транскрибированный текст сохранен")
         except Exception as e:
-            logging.error(e)
+            insighter_logger.exception(e)
             raise
 
     @staticmethod
@@ -247,9 +249,9 @@ class UserDocsRepoORM:
         doc['meta_data'] = info
         try:
             user.save()
-            logging.info("Транскрибированный текст сохранен")
+            insighter_logger.info("Транскрибированный текст сохранен")
         except Exception as e:
-            logging.error(e)
+            insighter_logger.exception(e)
             raise
 
     @staticmethod
@@ -272,9 +274,9 @@ class UserDocsRepoORM:
         doc['summary'] = summary_text
         try:
             user.save()
-            logging.info("Саммари текст сохранен")
+            insighter_logger.info("Саммари текст сохранен")
         except Exception as e:
-            logging.error(e)
+            insighter_logger.exception(e)
             raise
 
     @staticmethod
@@ -293,7 +295,7 @@ class UserDocsRepoORM:
         try:
             user.save()
         except Exception as e:
-            logging.exception(f"failed to update current doc page {e}")
+            insighter_logger.exception(f"failed to update current doc page {e}")
 
 
 class UserBalanceRepoORM:
@@ -459,12 +461,12 @@ class TransactionRepoORM:
                                                                                 telegram_payment_charge_id=telegram_payment_charge_id
                                                                                 )
         except Exception as e:
-            logging.exception(f'Failed to form transaction object {e}')
+            insighter_logger.exception(f'Failed to form transaction object {e}')
             raise e
         try:
             transaction.save()
         except Exception as e:
-            logging.exception(f"failed to save transaction {e}")
+            insighter_logger.exception(f"failed to save transaction {e}")
             raise e
 
 

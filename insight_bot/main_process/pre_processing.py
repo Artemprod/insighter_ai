@@ -29,7 +29,7 @@
 #             try:
 #                 self._nlp = spacy.load(self.model_name, disable=["parser", "ner"])
 #             except IOError:
-#                 logging.error(f"Model {self.model_name} not installed. Please install using 'spacy.cli.download'")
+#                 insighter_logger.exception(f"Model {self.model_name} not installed. Please install using 'spacy.cli.download'")
 #                 raise
 #         return self._nlp
 #
@@ -67,9 +67,9 @@
 #             try:
 #                 return await asyncio.get_event_loop().run_in_executor(None, lambda: self.russian_preprocessor.preprocess_text(text))
 #             except Exception as ee:
-#                 logging.error(f"RussianTextPreprocessor failed: {ee}")
+#                 insighter_logger.exception(f"RussianTextPreprocessor failed: {ee}")
 #
-#         logging.error("All preprocessing methods failed. Returning original text.")
+#         insighter_logger.exception("All preprocessing methods failed. Returning original text.")
 #         return text
 #
 #

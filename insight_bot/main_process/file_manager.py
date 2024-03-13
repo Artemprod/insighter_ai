@@ -14,6 +14,8 @@ import paramiko
 from dataclasses import dataclass
 from environs import Env
 
+from logging_module.log_config import insighter_logger
+
 
 class IMediaFileManager(ABC):
     @abstractmethod
@@ -69,9 +71,9 @@ class MediaFileManager(IMediaFileManager):
                      f"last name: {message.from_user.last_name}")
 
         if level == 'info':
-            logging.info(f"File for {user_info} located in {file_path}")
+            insighter_logger.info(f"File for {user_info} located in {file_path}")
         elif level == 'error':
-            logging.error(f"Error for {user_info}: {error_msg}")
+            insighter_logger.exception(f"Error for {user_info}: {error_msg}")
 
 
 class TelegramMediaFileManager(MediaFileManager):
@@ -97,7 +99,7 @@ class TelegramMediaFileManager(MediaFileManager):
     @staticmethod
     async def _check_and_return_path(file_path) -> str:
         if await asyncio.to_thread(os.path.exists, file_path):
-            logging.info(f"File found in the existing file system. File path is: {file_path}")
+            insighter_logger.info(f"File found in the existing file system. File path is: {file_path}")
             return file_path
         else:
             raise TelegramServerVolumePathExistingError(
@@ -117,6 +119,7 @@ class ServerFileManager(MediaFileManager):
         audio: str
         video: str
         documents: str
+        voice: str
 
     def __init__(self):
         self.file_paths = self.create_file_paths()
@@ -148,7 +151,8 @@ class ServerFileManager(MediaFileManager):
         video = f'/var/lib/docker/volumes/insighter_ai_shared_volume/_data/{token}/videos/'
         audio = f'/var/lib/docker/volumes/insighter_ai_shared_volume/_data/{token}/music/'
         documents = f'/var/lib/docker/volumes/insighter_ai_shared_volume/_data/{token}/documents/'
-        return ServerFileManager.Filepaths(audio=audio, video=video, documents=documents)
+        voice = f'/var/lib/docker/volumes/insighter_ai_shared_volume/_data/{token}/voice/'
+        return ServerFileManager.Filepaths(audio=audio, video=video, documents=documents,voice=voice)
 
     @classmethod
     def __load_config(cls) -> Configs:
@@ -191,7 +195,6 @@ class ServerFileManager(MediaFileManager):
 
         income_format = self.__define_type(income_file_path)
         file_name = self.get_file_name(income_file_path)
-        print()
         path = None
         if income_format == 'music':
             path = f'{self.file_paths.audio}{file_name}'
@@ -199,6 +202,8 @@ class ServerFileManager(MediaFileManager):
             path = f'{self.file_paths.video}{file_name}'
         elif income_format == 'documents':
             path = f'{self.file_paths.documents}{file_name}'
+        elif income_format == 'voice':
+            path = f'{self.file_paths.voice}{file_name}'
         try:
             # Команда для проверки файла
 
@@ -244,6 +249,8 @@ class ServerFileManager(MediaFileManager):
             server_file_path = f'{self.file_paths.video}{file_name}'
         elif income_format == 'documents':
             server_file_path = f'{self.file_paths.documents}{file_name}'
+        elif income_format == 'voice':
+            server_file_path = f'{self.file_paths.voice}{file_name}'
 
         try:
             local_file_path = ServerFileManager.local_file_path
@@ -253,7 +260,7 @@ class ServerFileManager(MediaFileManager):
             sftp.close()
             return local_file_full_path
         except Exception as e:
-            logging.exception(e)
+            insighter_logger.exception(e)
             print(f"Ошибка при загрузке файла: {e}")
             return None
         finally:
@@ -271,6 +278,9 @@ class ServerFileManager(MediaFileManager):
         elif income_format == 'documents':
             size_mb = self.__execute_command_get_remote_file_size_mb(
                 file_path=f'{self.file_paths.documents}{file_name}')
+        elif income_format == 'voice':
+            size_mb = self.__execute_command_get_remote_file_size_mb(
+                file_path=f'{self.file_paths.voice}{file_name}')
         return size_mb
 
     def delete_file(self, income_file_path):
@@ -284,6 +294,8 @@ class ServerFileManager(MediaFileManager):
             path = f'{self.file_paths.video}{file_name}'
         elif income_format == 'documents':
             path = f'{self.file_paths.documents}{file_name}'
+        elif income_format == 'voice':
+            path = f'{self.file_paths.voice}{file_name}'
 
         try:
             # Команда для удаления файла

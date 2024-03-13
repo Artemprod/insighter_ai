@@ -3,6 +3,7 @@ import logging
 from environs import Env
 
 from DB.Mongo.mongo_db import TransactionRepoORM, UserBalanceRepoORM, TariffRepoORM, MongoAssistantRepositoryORM
+
 from keyboards.inline_keyboards import crete_inline_keyboard_assistants
 from lexicon.LEXICON_RU import MESSAGES, TARIFFS, REFERRAL_MESSAGE, LEXICON_RU
 from aiogram.enums import ContentType
@@ -124,7 +125,7 @@ async def process_successful_payment(message: Message,
             telegram_payment_charge_id=successful_payment.telegram_payment_charge_id,
         )
     except Exception as e:
-        logging.exception(f'Faild to ssave transaction sorry {e}')
+        insighter_logger.exception(f'Faild to ssave transaction sorry {e}')
 
     tariffs = {
         TARIFFS['base']: tariff_repository.get_base_tariff,
@@ -137,7 +138,7 @@ async def process_successful_payment(message: Message,
         await user_balance_repo.add_user_time_balance(tg_id=message.from_user.id,
                                                       time=tariff.minutes * 60)
     except Exception as e:
-        logging.exception(f'Failed to add minutes {e}')
+        insighter_logger.exception(f'Failed to add minutes {e}')
 
     total_amount = message.successful_payment.total_amount // 100
     currency = message.successful_payment.currency

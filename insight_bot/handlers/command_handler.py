@@ -1,17 +1,12 @@
-import datetime
-
 from aiogram.filters import CommandStart, Command
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, WebAppInfo, InlineKeyboardButton, BotCommand
-
 from DB.Mongo.mongo_db import MongoAssistantRepositoryORM, MongoUserRepoORM, UserBalanceRepoORM
-from costume_filters.feedback import FeedbackCommandFilter
-from costume_filters.paye import TariffCommandFilter
-
 from keyboards.inline_keyboards import crete_inline_keyboard_assistants, crete_inline_keyboard_back_from_loading
 
 from lexicon.LEXICON_RU import LEXICON_RU
+
 from services.service_functions import seconds_to_min_sec, generate_telegram_user_link
 
 router = Router()
@@ -38,8 +33,10 @@ async def process_start_command(message: Message,
                                                           user_tg_id=message.from_user.id)
 
     await message.answer(
-        text=f"{LEXICON_RU['description']}\n\n<b>Осталось минут: {await seconds_to_min_sec(time_left)}</b> \n\n{LEXICON_RU['next']} ",
-        reply_markup=assistant_keyboard)
+            text=f"{LEXICON_RU['description']}\n\n<b>Осталось минут: {await seconds_to_min_sec(time_left)}</b> \n\n{LEXICON_RU['next']} ",
+            reply_markup=assistant_keyboard)
+
+
 
 
 @router.message(Command(BotCommand(command="feedback", description="Оставить отзыв")))

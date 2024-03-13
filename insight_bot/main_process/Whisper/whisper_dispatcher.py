@@ -10,7 +10,9 @@ import aiofiles.tempfile
 
 from costume_excepyions.ai_exceptions import LoadingShorthandsTranscriberError, \
     LoadingLongTranscriberError, MediaSizeError, TranscribitionError, ShortMediaTranscribitionError, \
-    EmptyResponseArrayError, AsyncTranscribitionError
+    AsyncTranscribitionError
+
+from logging_module.log_config import insighter_logger
 from main_process.Whisper.openai_whisper_complain import WhisperClient
 from main_process.Whisper.whisper_information import WhisperModelManager
 from main_process.file_format_manager import TelegramServerFileFormatDefiner
@@ -41,10 +43,10 @@ class ShortMediaFilesTranscriber(MediaFileTranscriber):
             file_path=file))
         try:
             recognized_text = await task
-            logging.info("Successfully transcribe file")
+            insighter_logger.info("Successfully transcribe file")
             return recognized_text
         except Exception as e:
-            logging.exception(f"Failed to transcribe short media file. exception {e}")
+            insighter_logger.exception(f"Failed to transcribe short media file. exception {e}")
             raise ShortMediaTranscribitionError(exception=e)
 
 
@@ -68,10 +70,10 @@ class LongMediaFilesTranscriber(MediaFileTranscriber):
             ))
             try:
                 result = await task
-                logging.info(f"Successfully transcribe text. Result: {result}")
+                insighter_logger.info(f"Successfully transcribe text. Result: {result}")
                 return result
             except Exception as e:
-                logging.exception(e)
+                insighter_logger.exception(e)
 
     async def __do_request(self,
                            audio_file_path: str,
@@ -90,19 +92,19 @@ class LongMediaFilesTranscriber(MediaFileTranscriber):
                 total_transcription = ' '.join(result)
                 return total_transcription
             except Exception as e:
-                logging.exception(f"Failed to manage async transcribe. Exception {e}")
+                insighter_logger.exception(f"Failed to manage async transcribe. Exception {e}")
                 raise AsyncTranscribitionError("Faild to manage async trancribe", exception=e)
         except Exception as e:
-            logging.exception(f"Failed to transcribe: {e}")
+            insighter_logger.exception(f"Failed to transcribe: {e}")
             return ""
 
             # try:
             #     transcribed_text = await self.whisper_client.whisper_compile(file_path=file,
             #                                                                  )
             #     total_transcription += transcribed_text + "\n"
-            #     logging.info(f"{number} piece of text is ready ... ")
+            #     insighter_logger.info(f"{number} piece of text is ready ... ")
             # except EmptyResponseArrayError:
-            #     logging.exception(EmptyResponseArrayError)
+            #     insighter_logger.exception(EmptyResponseArrayError)
             #     #TODO придумать как обработвать
             #     continue
 
@@ -129,11 +131,11 @@ class MediaRecognitionFactory:
         try:
             request_method = await self.__factory_method(file_path=file_path)
             result = await request_method.transcribe_media(file=file_path)
-            logging.info(f"successful transcribe text. Result is:"
+            insighter_logger.info(f"successful transcribe text. Result is:"
                          f" \n {result}")
             return result
         except Exception as e:
-            logging.exception(f'Failed to make request, exception is: {e}')
+            insighter_logger.exception(f'Failed to make request, exception is: {e}')
             raise TranscribitionError(exception=e)
 
     async def __factory_method(self,
@@ -144,13 +146,13 @@ class MediaRecognitionFactory:
             try:
                 return self.__short_media_transcriber
             except Exception as e:
-                logging.exception(f"faild to load class of short trancriber {e}")
+                insighter_logger.exception(f"faild to load class of short trancriber {e}")
                 raise LoadingShorthandsTranscriberError(exception=e)
         elif audio_size >= 24:
             try:
                 return self.__long_media_transcriber
             except Exception as e:
-                logging.exception(f"faild to load class of long trancriber {e}")
+                insighter_logger.exception(f"faild to load class of long trancriber {e}")
                 raise LoadingLongTranscriberError(exception=e)
         else:
             raise MediaSizeError(message="File size equal 0")

@@ -5,6 +5,8 @@ import openai
 from openai import AsyncOpenAI
 import asyncio
 from costume_excepyions.ai_exceptions import EmptyResponseArrayError
+
+from logging_module.log_config import insighter_logger
 from main_process.Whisper.whisper_information import WhisperModelManager
 
 
@@ -40,7 +42,7 @@ class WhisperClient:
                 'temperature': temperature
             }
             print('gpt args:', gpt_args)
-            logging.info('gpt args:', gpt_args)
+            insighter_logger.info('gpt args:', gpt_args)
             response = await self.__request(gpt_args)
             return response
 
@@ -52,8 +54,8 @@ class WhisperClient:
 
         response = await asyncio.create_task(task)
         if response.text:
-            logging.info('response_text:', response.text)
+            insighter_logger.info('response_text:', response.text)
             return response.text
         else:
-            logging.exception('No data returned in the response.')
+            insighter_logger.exception('No data returned in the response.')
             raise EmptyResponseArrayError('No data returned in the response.')

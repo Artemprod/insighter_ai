@@ -11,15 +11,8 @@ import asyncio
 
 from retry import retry
 
-from insiht_bot_container import config_data
-
-
-
-
-
-
-
-
+from insiht_bot_container import config_data, logger
+from logging_module.log_config import insighter_logger
 
 
 class WhisperRecognitionAPI:
@@ -42,7 +35,7 @@ class WhisperRecognitionAPI:
         """Загружает api key для класса, при условии что ключь находиться в env"""
         if cls.api_key is None:
             cls.api_key = config_data.ChatGPT.key
-            logging.info("API ключ загружен.")
+            insighter_logger.info("API ключ загружен.")
 
     async def transcribe_file(self, file_path) -> str:
         """в зависимости от длинны входящего файла либо нарезает либо делает сразу запрос"""
@@ -51,26 +44,21 @@ class WhisperRecognitionAPI:
         audio_size = await self.get_file_size_mb(file_path)
         if audio_size > 24:
             try:
-                result = await self.transcribe_large_files(file_path)
-                end_time = time.time()
-                logging.info("время транспирации:", end_time - start_time)
-                print("время транспирации:", end_time - start_time)
-                logging.info("Текст транспирации:\n", result)
-                print(f"Время выполнения: {end_time - start_time} секунд")
+                result = await self.transcribe_large_files(file_path)       
                 await self.del_temp_files()
                 return result
             except Exception as e:
-                logging.error(f"Something went wrong during long transcribing file with Whisper. \n Error: {e}")
+                insighter_logger.exception(f"Something went wrong during long transcribing file with Whisper. \n Error: {e}")
                 raise e
         try:
             result = await self.get_api_request(file_path)
-            logging.info(result)
+            insighter_logger.info(result)
             end_time = time.time()
-            logging.info("время транспирации:", end_time - start_time)
+            insighter_logger.info("время транспирации:", end_time - start_time)
             print(f"Время выполнения: {end_time - start_time} секунд")
             return result
         except Exception as e:
-            logging.error(f"Something went wrong during transcribing file with Whisper. \n Error: {e}")
+            insighter_logger.exception(f"Something went wrong during transcribing file with Whisper. \n Error: {e}")
             raise e
 
     @retry(PermissionError, tries=5, delay=1)
@@ -80,9 +68,9 @@ class WhisperRecognitionAPI:
             path = f'{self.output_folder}/{file}'
             try:
                 os.remove(path)
-                logging.info("файл удален:", path)
+                insighter_logger.info("файл удален:", path)
             except Exception as e:
-                logging.error(e, "Ошибка удаления файла")
+                insighter_logger.exception(e, "Ошибка удаления файла")
 
     async def get_api_request(self, file_path, prompt=''):
         """Given a prompt, transcribe the audio file."""
@@ -107,10 +95,10 @@ class WhisperRecognitionAPI:
                 file_path = os.path.normpath(os.path.join(WhisperRecognitionAPI.output_folder, filename))
                 transcribed_text = await self.get_api_request(file_path=file_path, prompt=total_transcription[-500:])
                 total_transcription += transcribed_text + "\n"
-                logging.info("Кусок текста готов")
+                insighter_logger.info("Кусок текста готов")
             return total_transcription
         except Exception as e:
-            logging.error(f"Ошибка при транскрибации больших файлов: {e}")
+            insighter_logger.exception(f"Ошибка при транскрибации больших файлов: {e}")
             return ""
 
 
@@ -144,7 +132,7 @@ class WhisperRecognitionAPI:
         if audio is not None:
             return audio.mime[0].split('/')[1]  # Возвращает тип файла после '/'
         else:
-            logging.info("Неизвестный формат")
+            insighter_logger.info("Неизвестный формат")
             return "None"
 
     async def slice_big_audio(self, audio_file_path):

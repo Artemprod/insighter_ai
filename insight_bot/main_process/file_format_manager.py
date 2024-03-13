@@ -7,6 +7,7 @@ import magic
 import filetype
 from costume_excepyions.format_exceptions import UnknownFormatRecognitionError
 from costume_excepyions.path_exceptions import PathDoesntExistError, WrongCodecError
+from logging_module.log_config import insighter_logger
 from main_process.func_decorators import ameasure_time
 
 
@@ -29,8 +30,8 @@ class TelegramServerFileFormatDefiner(FileFormatDefiner):
             result = await magic_task
             return result.split('/')[-1]
         except (PathDoesntExistError, WrongCodecError):
-            logging.error('magic_task failed to handle a work')
-            logging.info('start kind task...')
+            insighter_logger.exception('magic_task failed to handle a work')
+            insighter_logger.info('start kind task...')
             kind_task = asyncio.create_task(self.__kind_define_format(file_path=file_path),
                                             name="define format by kind")
             try:
@@ -38,15 +39,15 @@ class TelegramServerFileFormatDefiner(FileFormatDefiner):
                 return result
 
             except UnknownFormatRecognitionError:
-                logging.error('magic_task failed to handle a work')
-                logging.info('start simple string task...')
+                insighter_logger.exception('magic_task failed to handle a work')
+                insighter_logger.info('start simple string task...')
                 string_task = asyncio.create_task(self.__simple_string_define_format(file_path=file_path),
                                                   name="define format by simple string recogntion")
                 try:
                     result = await string_task
                     return result
                 except UnknownFormatRecognitionError:
-                    logging.exception('all format methods are failed, try another')
+                    insighter_logger.exception('all format methods are failed, try another')
                     #TODO Добавить отправку сообщения что формат файла не подхиодит отправ
 
 
@@ -63,17 +64,17 @@ class TelegramServerFileFormatDefiner(FileFormatDefiner):
                 return result
             raise PathDoesntExistError("i can't open this file because No such file or directory")
         else:
-            logging.exception(f'path {path_to_file} doesnt exist')
+            insighter_logger.error(f'path {path_to_file} doesnt exist')
             raise PathDoesntExistError(f'path {path_to_file}  doesnt exist')
 
     @staticmethod
     async def __kind_define_format(file_path):
         kind = filetype.guess(file_path)
         if kind is None:
-            logging.exception('Unknown format ,kind cant managed to retrieve information ')
+            insighter_logger.error('Unknown format ,kind cant managed to retrieve information ')
             raise UnknownFormatRecognitionError('Неизвестный формат')
         else:
-            logging.info('successfully work of Kind \n\n File MIME type: %s' % kind.mime)
+            insighter_logger.info('successfully work of Kind \n\n File MIME type: %s' % kind.mime)
             return kind.extension
 
     @staticmethod

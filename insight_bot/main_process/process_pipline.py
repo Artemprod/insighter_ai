@@ -10,14 +10,16 @@ from dataclasses import dataclass
 from DB.Mongo.mongo_db import UserDocsRepoORM
 from api.progress_bar.command import ProgressBarClient
 from config.bot_configs import Config
-from costume_excepyions.format_exceptions import EncodingDetectionError, NotSupportedFormatError
-from costume_excepyions.system_exceptions import SystemTypeError
+from costume_excepyions.format_exceptions import EncodingDetectionError
+
 from enteties.pipline_data import PipelineData
+
 from lexicon.LEXICON_RU import LEXICON_RU
+from logging_module.log_config import insighter_logger
 
 from main_process.ChatGPT.gpt_dispatcher import GPTDispatcher
 from main_process.file_format_manager import FileFormatDefiner
-from main_process.file_manager import TelegramMediaFileManager, ServerFileManager
+from main_process.file_manager import TelegramMediaFileManager
 from main_process.post_ptocessing import PostProcessor
 
 from main_process.text_invoke import TextInvokeFactory
@@ -27,6 +29,7 @@ from states.summary_from_audio import FSMSummaryFromAudioScenario
 from enteties.queue_entity import PipelineQueues
 
 
+#TODO Разнести логику пайплана и чат бота
 class ProcesQueuePipline:
     def __init__(self,
                  queue_pipeline: PipelineQueues,
@@ -61,7 +64,7 @@ class ProcesQueuePipline:
         data: PipelineData = await income_items_queue.get()
         data.process_time.setdefault('produce_file_path', dict())
         data.process_time['produce_file_path']['start_time'] = time.time()
-        print('запуск в пайплане первый воркер', data)
+        insighter_logger.info('запуск в пайплане первый воркер', data)
         message: aiogram.types.Message = data.telegram_message
 
         try:
@@ -84,8 +87,8 @@ class ProcesQueuePipline:
         except Exception as e:
             await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                  text=LEXICON_RU['error_message'])
-            logging.exception(e)
-            raise e
+            insighter_logger.exception(e)
+
 
     async def invoke_text(self,
                           invoke_text_queue: Queue,
@@ -103,18 +106,19 @@ class ProcesQueuePipline:
             data: PipelineData = await invoke_text_queue.get()
             data.process_time.setdefault('invoke_text', dict())
             data.process_time['invoke_text']['start_time'] = time.time()
-            print(f"Получил данные для извлечения текста {data}")
+            insighter_logger.info(f"Получил данные для извлечения текста {data}")
             path_to_file = data.file_path
-            print("Путь до файла", path_to_file)
+            insighter_logger.info("Путь до файла", path_to_file)
             if path_to_file:
                 invoked_text = None
                 try:
                     invoked_text = await self.__text_invoker.invoke_text(path_to_file)
-                except EncodingDetectionError as e:
-                    logging.exception(e)
+                except Exception as e:
+                    insighter_logger.exception(e, "Cant invoke text", self.__dict__)
+                    await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
                     await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                          text=LEXICON_RU['error_message'])
-                    logging.exception(e)
+                    insighter_logger.exception(e)
                 if invoked_text:
                     post_processed_text = await self.__post_processor.remove_redundant_repeats(text=invoked_text)
                     data.transcribed_text = post_processed_text
@@ -128,12 +132,13 @@ class ProcesQueuePipline:
                         # delete user uploaded file from server
                         await asyncos.remove(path_to_file)
                     except Exception as e:
-                        logging.exception(e, "cant save recognized text in piplene ", self.__dict__)
+                        insighter_logger.exception(e, "cant save recognized text in piplene ", self.__dict__)
+                        await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
                         await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                              text=LEXICON_RU['error_message'])
-                        logging.exception(e)
+
                     finally:
-                        print(f"Провел извлевчение {data}")
+                        insighter_logger.info(f"Провел извлевчение {data}")
                         await gen_answer_queue.put(data)
                         await transcribed_text_sender_queue.put(data)
                         invoke_text_queue.task_done()
@@ -142,17 +147,20 @@ class ProcesQueuePipline:
                             data.process_time['invoke_text']['finished_time'] - \
                             data.process_time['invoke_text']['start_time']
                 else:
-                    logging.exception(AttributeError, 'No recognized text')
+                    insighter_logger.exception(AttributeError, 'No recognized text')
+                    await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
                     await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                          text=LEXICON_RU['error_message'])
-                    logging.exception(AttributeError)
-                    raise AttributeError
+
+
+
             else:
-                logging.exception(AttributeError, "No path to file")
+                insighter_logger.exception(AttributeError, "No path to file")
+                await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
                 await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                      text=LEXICON_RU['error_message'])
-                logging.exception(AttributeError)
-                raise AttributeError
+
+
 
     async def generate_summary_answer(self,
                                       gen_answer_queue: Queue,
@@ -161,9 +169,8 @@ class ProcesQueuePipline:
             data: PipelineData = await gen_answer_queue.get()
             data.process_time.setdefault('generate_summary_answer', dict())
             data.process_time['generate_summary_answer']['start_time'] = time.time()
-            print(f'Получил данные для генерации текста {data}')
-            print(f'Вот препроцессинг текст {data.preprocessed_text}')
-            # text_to_summary = data.preprocessed_text
+            insighter_logger.info(f'Получил данные для генерации текста {data}')
+            insighter_logger.info(f'Вот препроцессинг текст {data.preprocessed_text}')
             text_to_summary = data.transcribed_text
             if text_to_summary:
                 summary = await self.__ai_llm_request.compile_request(
@@ -181,7 +188,7 @@ class ProcesQueuePipline:
                             doc_id=data.debase_document_id,
                             summary_text=summary)
                     except Exception as e:
-                        logging.exception(e, "cant save summary text in database", self.__dict__)
+                        insighter_logger.exception(e, "cant save summary text in database", self.__dict__)
                     finally:
                         await result_dispatching_queue.put(data)
                         gen_answer_queue.task_done()
@@ -190,17 +197,19 @@ class ProcesQueuePipline:
                         data.process_time['generate_summary_answer']['finished_time'] - \
                         data.process_time['generate_summary_answer']['start_time']
                 else:
-                    logging.exception(AttributeError, 'No summary')
+                    insighter_logger.exception(AttributeError, 'No summary')
+                    await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
                     await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                          text=LEXICON_RU['error_message'])
-                    logging.exception(AttributeError)
-                    raise AttributeError
+
+
 
             else:
-                logging.exception(AttributeError, "No text")
+                insighter_logger.exception(AttributeError, "No text")
+                await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
                 await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                      text=LEXICON_RU['error_message'])
-                raise AttributeError
+
 
     @staticmethod
     def create_tasks(number_of_workers,
@@ -232,7 +241,8 @@ class ProcesQueuePipline:
 
         try:
             await asyncio.gather(*tasks)
+            insighter_logger.info("async pipline process start")
 
         except Exception as e:
-            logging.info(e)
-            logging.exception(e)
+            insighter_logger.info(e)
+            insighter_logger.exception(e)

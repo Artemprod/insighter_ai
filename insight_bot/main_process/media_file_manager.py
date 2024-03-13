@@ -1,6 +1,8 @@
 
-import logging
+
 import os
+
+from logging_module.log_config import insighter_logger
 from main_process.file_format_manager import FileFormatDefiner
 
 import asyncio
@@ -41,7 +43,7 @@ class MediaFileManager:
             )
             return result
         except Exception as e:
-            logging.exception(f"Failed to export segment: {e}")
+            insighter_logger.exception(f"Failed to export segment: {e}")
             return None
 
     @staticmethod
@@ -54,7 +56,7 @@ class MediaFileManager:
             print(f"Exported segment to {saving_path}")
             return saving_path
         except Exception as e:
-            logging.exception(e)
+            insighter_logger.exception(e)
             print(e, 'Error export')
 
     async def process_audio_segments(self, audio_file_path, output_directory_path):
@@ -109,7 +111,7 @@ class MediaFileManager:
     #         segment.export(saving_path, format="mp3")
     #         return saving_path
     #     except Exception as e:
-    #         logging.exception(f"failed to export piece of audio segment. Exception {e}")
+    #         insighter_logger.exception(f"failed to export piece of audio segment. Exception {e}")
 
     # async def __run_export_segment_in_pool(self, segment,
     #                                        saving_path):
@@ -122,15 +124,15 @@ class MediaFileManager:
     #         )
     #         try:
     #             result = await work
-    #             logging.info("Successfully crop media")
+    #             insighter_logger.info("Successfully crop media")
     #             print(result)
     #             return saving_path
     #         except Exception as e:
-    #             logging.exception(e)
+    #             insighter_logger.exception(e)
     #     try:
     #
     #         return saving_path
     #     except Exception as e:
-    #         logging.exception(e)
+    #         insighter_logger.exception(e)
 
 

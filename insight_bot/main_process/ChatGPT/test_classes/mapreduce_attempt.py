@@ -10,7 +10,7 @@
 #                                                                     additional_system_information=additional_system_information,
 #                                                                     additional_user_information=additional_user_information)
 #         except Exception as e:
-#             logging.exception("Failed to generate datda for for model")
+#             insighter_logger.exception("Failed to generate datda for for model")
 #             raise GeneratingDataForModelError("Failed to generate datda for for model", exception=e)
 #
 #         gpt_client: GPTClient = await self.load_gpt()
@@ -18,11 +18,11 @@
 #             response = await gpt_client.complete(messages=[user_message],
 #                                                  system_message=system_massage,
 #                                                  )
-#             logging.info(f"successful gpt api request. result is: \n {response} ")
+#             insighter_logger.info(f"successful gpt api request. result is: \n {response} ")
 #             return response
 #
 #         except Exception as e:
-#             logging.exception(f"Somthing went wrong with gpt api request. Error {e}")
+#             insighter_logger.exception(f"Somthing went wrong with gpt api request. Error {e}")
 #             raise GptApiRequestError(f"Somthing went wrong with gpt api request. Error {e}",
 #                                      exception=e)
 #
@@ -61,7 +61,7 @@
 #             final_summary = self._final_summary()
 #             return final_summary
 #         except Exception as e:
-#             logging.exception("Failed during GPT request processing", exc_info=e)
+#             insighter_logger.exception("Failed during GPT request processing", exc_info=e)
 #
 #     async def _final_summary(self, docs:ReadySummaryDocument):
 #         chunk_size = await self.__init_chunk_size()
@@ -122,7 +122,7 @@
 #                     number=number))
 #             return documents
 #         except Exception as e:
-#             logging.exception("Failed to make chuncks", e)
+#             insighter_logger.exception("Failed to make chuncks", e)
 #
 #     @staticmethod
 #     def crop_text_recursively(chunk_size, chunk_overlap, text):
@@ -141,12 +141,12 @@
 #             response = await gpt_client.complete(messages=[document.user_message],
 #                                                  system_message=document.system_massage,
 #                                                  )
-#             logging.info(f"successful gpt api request. result is: \n {response} ")
+#             insighter_logger.info(f"successful gpt api request. result is: \n {response} ")
 #             document = await self.__make_document(summarized_text=response,
 #                                                   number=document.number)
 #             return document
 #         except Exception as e:
-#             logging.exception(f"Somthing went wrong with gpt api request. Error {e}")
+#             insighter_logger.exception(f"Somthing went wrong with gpt api request. Error {e}")
 #             raise GptApiRequestError(f"Somthing went wrong with gpt api request. Error {e}",
 #                                      exception=e)
 #

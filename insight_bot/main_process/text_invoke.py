@@ -11,10 +11,12 @@ from os import path
 from environs import Env
 from costume_excepyions.file_read_exceptions import UnknownPDFreadFileError
 from concurrent.futures import ProcessPoolExecutor
-from costume_excepyions.format_exceptions import UnknownFormatRecognitionError, \
+from costume_excepyions.format_exceptions import  \
     EncodingDetectionError
-from main_process.Whisper.whisper_dispatcher import MediaFileTranscriber, MediaRecognitionFactory
-from main_process.file_format_manager import FileFormatDefiner, TelegramServerFileFormatDefiner
+from logging_module.log_config import insighter_logger
+
+from main_process.Whisper.whisper_dispatcher import  MediaRecognitionFactory
+from main_process.file_format_manager import FileFormatDefiner
 from dataclasses import dataclass
 
 
@@ -61,7 +63,7 @@ class PdfFileHandler(IPdfFileHandler):
                 content = "".join(content_pieces)
                 return content
             except UnknownPDFreadFileError:
-                logging.error("Something went wrong during invoking text from PDF in corutine function")
+                insighter_logger.exception("Something went wrong during invoking text from PDF in corutine function")
                 raise UnknownPDFreadFileError
 
     async def invoke_text(self, file_path):
@@ -74,9 +76,9 @@ class PdfFileHandler(IPdfFileHandler):
                 )
                 return result
             except UnknownPDFreadFileError:
-                logging.error("Something went wrong during invoking text from PDF in invoke function")
+                insighter_logger.exception("Something went wrong during invoking text from PDF in invoke function")
             except Exception as e:
-                logging.error(f"Unknown Error named: {e}")
+                insighter_logger.exception(f"Unknown Error named: {e}")
 
 
 class TxtFileHandler(ITxtFileHandler):
@@ -88,7 +90,7 @@ class TxtFileHandler(ITxtFileHandler):
                 content = await t.read()
             return content
         except EncodingDetectionError:
-            logging.error('Unknown encoding detection error')
+            insighter_logger.exception('Unknown encoding detection error')
 
     @staticmethod
     async def __detect_encoding_fast(
@@ -99,10 +101,10 @@ class TxtFileHandler(ITxtFileHandler):
         try:
             result = chardet.detect(sample)
             encoding = result['encoding']
-            logging.info("Successful encoding detection: %s", encoding)
+            insighter_logger.info("Successful encoding detection: %s", encoding)
             return encoding
         except Exception as e:  # На практике следует уточнить тип исключения
-            logging.error("Unknown encoding detection error: %s", e)
+            insighter_logger.exception("Unknown encoding detection error: %s", e)
             raise EncodingDetectionError(f"Unknown encoding detection error: {e}")
 
 
@@ -115,10 +117,10 @@ class VideoFileHandler(IVideoFileHandler):
     async def invoke_text(self, file_path):
         try:
             result = await self.__recognizer.compile_transcription(file_path=file_path)
-            logging.info(f"Text from VIDEO successfully invoked. \n The result: \n {result}")
+            insighter_logger.info(f"Text from VIDEO successfully invoked. \n The result: \n {result}")
             return result
         except Exception as e:
-            logging.error(f"something went wrong in text from Video invoking process. Error: {e}")
+            insighter_logger.exception(f"something went wrong in text from Video invoking process. Error: {e}")
 
 
 class AudioFileHandler(IAudioFileHandler):
@@ -128,10 +130,10 @@ class AudioFileHandler(IAudioFileHandler):
     async def invoke_text(self, file_path):
         try:
             result = await self.__recognizer.compile_transcription(file_path=file_path)
-            logging.info(f"Text from AUDIO successfully invoked. \n The result: \n {result}")
+            insighter_logger.info(f"Text from AUDIO successfully invoked. \n The result: \n {result}")
             return result
         except Exception as e:
-            logging.error(f"something went wrong in text from Video invoking process. Error: {e}")
+            insighter_logger.exception(f"something went wrong in text from Video invoking process. Error: {e}")
 
 
 @dataclass
@@ -181,15 +183,15 @@ class TextInvokeFactory(ITextInvokeFactory):
         try:
             invoker = await self.__create_invoker(file_path)
         except EncodingDetectionError as e:
-            logging.exception(e, 'Failf to invoke text')
+            insighter_logger.exception(e, 'Failf to invoke text')
             raise EncodingDetectionError
 
         try:
             text = await invoker.invoke_text(file_path)
-            logging.info("text invoked")
+            insighter_logger.info("text invoked")
             return text
         except Exception as e:
-            logging.exception(e, 'Failf to invoke text')
+            insighter_logger.exception(e, 'Failf to invoke text')
             raise e
 
     async def __create_invoker(self, file_path):
@@ -199,13 +201,9 @@ class TextInvokeFactory(ITextInvokeFactory):
             return self._video_handler
         elif income_file_format in self.formats.AUDIO_FORMATS:
             return self._audio_handler
-        elif income_file_format == self.formats.TXT_FORMAT:
-            return self._txt_handler
-        elif income_file_format == self.formats.PDF_FORMAT:
-            return self._pdf_handler
         else:
             # TODO логировать все новые файлы
-            logging.exception(f"This file format {income_file_format} havent supported")
+            insighter_logger.exception(f"This file format {income_file_format} havent supported")
             raise EncodingDetectionError(f"This file format {income_file_format} havent supported")
         # TODO Выдать что формат не правильный вывести в сообщение бот ( точно правильное место )
 

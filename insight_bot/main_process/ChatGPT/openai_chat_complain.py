@@ -6,6 +6,7 @@ from openai import AsyncOpenAI
 import openai
 
 from costume_excepyions.ai_exceptions import EmptyResponseArrayError
+from logging_module.log_config import insighter_logger
 from main_process.ChatGPT.gpt_message import GPTMessage
 from main_process.ChatGPT.gpt_options import GPTOptions
 
@@ -48,8 +49,8 @@ class GPTClient:
         }
         print('gpt args:', gpt_args)
         print('msg list', msg_list)
-        logging.info('gpt args:', gpt_args)
-        logging.info('msg list', msg_list)
+        insighter_logger.info('gpt args:', gpt_args)
+        insighter_logger.info('msg list', msg_list)
 
         response = await self.__request(gpt_args)
         return response
@@ -68,9 +69,9 @@ class GPTClient:
             response_choice = response.choices[0]  # Получаем первый диалоговый выбор.
             response_message = response_choice.message  # Извлекаем сообщение из выбранного диалога.
             response_text = response_message.content  # Поле 'content' содержит текст ответа.
-            logging.info('response_text:', response_text)
+            insighter_logger.info('response_text:', response_text)
         else:
             # Обработка случая, когда список 'choices' пуст.
-            logging.exception('No choices returned in the response.')
+            insighter_logger.exception('No choices returned in the response.')
             raise EmptyResponseArrayError('No choices returned in the response.')
         return response_text

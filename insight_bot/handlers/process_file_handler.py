@@ -1,4 +1,7 @@
+import logging
+
 from aiogram import Router, Bot, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, BufferedInputFile
 from aiogram.types import ContentType
@@ -11,6 +14,7 @@ from keyboards.calback_factories import AssistantCallbackFactory
 from keyboards.inline_keyboards import crete_inline_keyboard_assistants, \
     crete_inline_keyboard_back_from_loading, crete_inline_keyboard_payed
 from lexicon.LEXICON_RU import LEXICON_RU, TIME_ERROR_MESSAGE
+from logging_module.log_config import insighter_logger
 from main_process.ChatGPT.gpt_models_information import GPTModelManager
 
 from main_process.process_pipline import PipelineQueues, PipelineData
@@ -67,6 +71,8 @@ async def wrong_file_format(message: Message,
                                                                   actual_formats=LEXICON_RU['actual_formats']))
 
 
+
+
 @router.message(FSMSummaryFromAudioScenario.load_file, F.content_type.in_({ContentType.VOICE,
                                                                            ContentType.AUDIO,
                                                                            ContentType.VIDEO,
@@ -98,8 +104,10 @@ async def processed_load_file(message: Message, bot: Bot,
         if checking >= 0:
             # await check_if_i_can_load()
             if instruction_message_id:
-                await bot.delete_message(chat_id=message.chat.id,
-                                         message_id=instruction_message_id)
+                try:
+                    await bot.delete_message(chat_id=message.chat.id, message_id=instruction_message_id)
+                except TelegramBadRequest as e:
+                    insighter_logger.exception(f"Ошибка при попытке удалить сообщение: {e}")
 
             # Form data to summary pipline
             pipline_object = await from_pipeline_data_object(message=message,

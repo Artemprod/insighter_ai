@@ -1,11 +1,11 @@
 import datetime
 import hashlib
-import logging
+
 import os
 import random
 from mongoengine import connect
 from DB.Mongo.mongo_enteties import Assistant, User
-from config.bot_configs import MongoDB
+
 
 
 class MongoORMConnection:
@@ -36,7 +36,6 @@ class MongoAssistantRepositoryORM:
         as_id = self.generate_id()
         assistant.assistant_id = as_id
         assistant.created_at = datetime.datetime.now()
-        print()
         try:
             assistant.save()
             print("Сохранено")

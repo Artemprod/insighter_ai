@@ -2,6 +2,7 @@ from DB.Mongo.mongo_db import MongoORMConnection, MongoAssistantRepositoryORM, M
     UserBalanceRepoORM, TransactionRepoORM, TariffRepoORM
 from api.progress_bar.command import ProgressBarClient
 from config.bot_configs import load_bot_config, Config
+from logging_module.log_config import load_loguru
 from main_process.ChatGPT.gpt_dispatcher import TextTokenizer, OneRequestGPTWorker, BigDataGPTWorker, GPTDispatcher, \
     GPTDispatcherOnlyLonghain
 from main_process.ChatGPT.gpt_models_information import GPTModelManager
@@ -10,14 +11,16 @@ from main_process.Whisper.whisper_dispatcher import ShortMediaFilesTranscriber, 
     MediaRecognitionFactory
 from main_process.Whisper.whisper_information import WhisperModelManager
 from main_process.file_format_manager import TelegramServerFileFormatDefiner
-from main_process.file_manager import TelegramMediaFileManager, ServerFileManager
+from main_process.file_manager import TelegramMediaFileManager
 from main_process.media_file_manager import MediaFileManager
 from main_process.post_ptocessing import PostProcessor
-# from main_process.pre_processing import SpacyTextPreprocessor, TextPreprocessorAggregator
+
 
 from main_process.text_invoke import PdfFileHandler, TxtFileHandler, VideoFileHandler, AudioFileHandler, \
     TextInvokeFactory, FORMATS
 
+# ______LOGGING____________________________________________
+logger = load_loguru()
 # ______FORMATS____________________________________________
 formats = FORMATS()
 # ______CONFIGS____________________________________________

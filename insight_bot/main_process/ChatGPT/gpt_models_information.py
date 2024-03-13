@@ -7,6 +7,7 @@ from environs import Env
 
 from costume_excepyions.config_loading import ModelVersionLoadingError, APIKeyLoadError, ContextLengthLoadingError, \
     ModelTempretureLoadingError
+from logging_module.log_config import insighter_logger
 
 # Словарь, содержащий информацию о максимальном числе токенов для каждой модели
 GPTModelsInfo = {
@@ -45,7 +46,7 @@ class GPTModelManager:
         try:
             return env("MODEL_VERSION")
         except Exception as e:
-            logging.error(f"Failed to load model version. Error {e} in class {self.__dict__}")
+            insighter_logger.exception(f"Failed to load model version. Error {e} in class {self.__dict__}")
             raise ModelVersionLoadingError(f"Failed to load model version. Error {e} in class {self.__dict__}")
 
     async def get_current_context_length(self) -> int:
@@ -58,7 +59,7 @@ class GPTModelManager:
         try:
             return int(env("CONTEXT_LENGTH"))
         except Exception as e:
-            logging.error(f"Failed to load model token capacity. Error {e} in class {self.__dict__}")
+            insighter_logger.exception(f"Failed to load model token capacity. Error {e} in class {self.__dict__}")
             raise ContextLengthLoadingError(f"Failed to load model token capacity. Error {e} in class {self.__dict__}")
 
     async def get_gpt_api_key(self):
@@ -67,7 +68,7 @@ class GPTModelManager:
         try:
             return env("OPENAI_API_KEY")
         except Exception as e:
-            logging.error(f"Failed to load open ai key. Error {e} in class {self.__dict__}")
+            insighter_logger.exception(f"Failed to load open ai key. Error {e} in class {self.__dict__}")
             raise APIKeyLoadError(f"Failed to load open ai key. Error {e} in class {self.__dict__}")
 
     async def get_gpt_model_tempreture(self):
@@ -76,7 +77,7 @@ class GPTModelManager:
         try:
             return float(env("MODEL_TEMPERATURE"))
         except Exception as e:
-            logging.error(f"Failed to load open ai temperature parameter. Error {e} in class {self.__dict__}")
+            insighter_logger.exception(f"Failed to load open ai temperature parameter. Error {e} in class {self.__dict__}")
             raise ModelTempretureLoadingError(
                 f"Failed to load open ai model temperature parameter. Error {e} in class {self.__dict__}")
 
@@ -86,7 +87,7 @@ class GPTModelManager:
         try:
             return int(env("MAX_RETURN_TOKENS"))
         except Exception as e:
-            logging.error(f"Failed to load open ai return tokens amount parameter. Error {e} in class {self.__dict__}")
+            insighter_logger.exception(f"Failed to load open ai return tokens amount parameter. Error {e} in class {self.__dict__}")
             raise ModelTempretureLoadingError(
                 f"Failed to load open ai return tokens amount parameter. Error {e} in class {self.__dict__}")
 

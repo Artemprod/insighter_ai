@@ -25,8 +25,9 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 
-from insiht_bot_container import server_file_manager, config_data, file_format_manager, text_invoker
+from insiht_bot_container import server_file_manager, config_data, file_format_manager, text_invoker, logger
 from lexicon.LEXICON_RU import LEXICON_RU
+from logging_module.log_config import insighter_logger
 from main_process.file_manager import ServerFileManager
 from states.summary_from_audio import FSMSummaryFromAudioScenario
 
@@ -216,9 +217,14 @@ async def estimate_transcribe_duration(message: Message):
         download_file_duration = await estimate_download_file_duration(media_type=message.document)
         return int((download_file_duration + 6))
 
-    elif media == 'music' or media == "audio" or media == 'voice':
+    elif media == 'music' or media == "audio" :
         download_file_duration = await estimate_download_file_duration(media_type=message.audio)
         transcribe_duration = await estimate_transcribe_file_duration(media_type=message.audio)
+        return int((download_file_duration + transcribe_duration + 6))
+
+    elif media == 'voice':
+        download_file_duration = await estimate_download_file_duration(media_type=message.voice)
+        transcribe_duration = await estimate_transcribe_file_duration(media_type=message.voice)
         return int((download_file_duration + transcribe_duration + 6))
 
     elif media == 'video':
@@ -298,7 +304,7 @@ async def num_tokens_from_string(string: str,
         num_tokens = len(encoding.encode(string))
         return num_tokens
     except Exception as e:
-        logging.exception(e)
+        insighter_logger.exception(e)
 
 
 # async def calculate_gpt_cost(input_text,
@@ -433,8 +439,9 @@ async def format_filter(message,
     elif system == "local":
         file_path_coro = ServerFileManager().get_media_file(message=message,
                                                             bot=bot)
+
     else:
-        logging.error("Unknown system, add new system")
+        insighter_logger.exception("Unknown system, add new system")
         raise SystemTypeError("Unknown system, add new system")
 
     begin_message = await bot.send_message(chat_id=message.chat.id,
@@ -442,6 +449,7 @@ async def format_filter(message,
     try:
         file_path = await file_path_coro
         income_file_format = await file_format_manager.define_format(file_path=file_path)
+
         if income_file_format in text_invoker.formats.make_list_of_formats():
             await bot.delete_message(message_id=begin_message.message_id, chat_id=begin_message.chat.id)
             return file_path, income_file_format
@@ -456,7 +464,7 @@ async def format_filter(message,
             await state.set_state(FSMSummaryFromAudioScenario.load_file)
             return None
     except Exception as e:
-        logging.exception(e)
+        insighter_logger.exception(e)
 
 
 if __name__ == '__main__':

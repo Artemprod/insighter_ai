@@ -20,7 +20,7 @@ class WhisperModelManager:
         try:
             return env("WHISPER_MODEL_VERSION")
         except Exception as e:
-            logging.error(f"Failed to load model version. Error {e} in class {self.__dict__}")
+            insighter_logger.exception(f"Failed to load model version. Error {e} in class {self.__dict__}")
             raise ModelVersionLoadingError(f"Failed to load model version. Error {e} in class {self.__dict__}")
 
     def get_gpt_api_key(self):
@@ -29,7 +29,7 @@ class WhisperModelManager:
         try:
             return env("OPENAI_API_KEY")
         except Exception as e:
-            logging.error(f"Failed to load open ai key. Error {e} in class {self.__dict__}")
+            insighter_logger.exception(f"Failed to load open ai key. Error {e} in class {self.__dict__}")
             raise APIKeyLoadError(f"Failed to load open ai key. Error {e} in class {self.__dict__}")
 
     def get_whisper_language(self):
@@ -38,7 +38,7 @@ class WhisperModelManager:
         try:
             return env("WHISPER_LANGUAGE")
         except Exception as e:
-            logging.error(f"Failed to load language. Error {e} in class {self.__dict__}")
+            insighter_logger.exception(f"Failed to load language. Error {e} in class {self.__dict__}")
             raise WhisperLanguageLoadError(f"Failed to load language. Error {e} in class {self.__dict__}")
 
     def get_temperature(self):
@@ -47,5 +47,5 @@ class WhisperModelManager:
         try:
             return env("WHISPER_MODEL_TEMPERATURE")
         except Exception as e:
-            logging.error(f"Failed to load language. Error {e} in class {self.__dict__}")
+            insighter_logger.exception(f"Failed to load language. Error {e} in class {self.__dict__}")
             raise WhisperLanguageLoadError(f"Failed to load language. Error {e} in class {self.__dict__}")

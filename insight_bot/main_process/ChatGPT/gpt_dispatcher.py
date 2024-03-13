@@ -11,7 +11,7 @@ import tiktoken
 from concurrent.futures import ProcessPoolExecutor
 
 from langchain.chains import LLMChain, StuffDocumentsChain, ReduceDocumentsChain, MapReduceDocumentsChain
-from langchain.text_splitter import RecursiveCharacterTextSplitter, NLTKTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter, NLTKTextSplitter, logger
 from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
@@ -21,6 +21,7 @@ from DB.Mongo.mongo_enteties import Assistant
 from costume_excepyions.ai_exceptions import CharactersInTokenMeasurement, GptApiRequestError, \
     LoadingLongRequestMethodError, LoadingShortRequestMethodError, CompileRequestError, GeneratingDataForModelError, \
     TokenCapacityMeasurement
+from logging_module.log_config import insighter_logger
 
 from main_process.ChatGPT.gpt_enteties import AssistantInWork
 from main_process.ChatGPT.gpt_message import GPTMessage, GPTRole
@@ -48,14 +49,14 @@ class TextTokenizer:
             num_tokens = len(encoding.encode(string))
             return num_tokens
         except Exception as e:
-            logging.exception(e)
+            insighter_logger.exception(e)
 
     def num_tokens_from_messages(self, messages, model="gpt-4-0314"):
         """Return the number of tokens used by a list of messages."""
         try:
             encoding = tiktoken.encoding_for_model(model)
         except KeyError:
-            logging.error("Warning: model not found. Using cl100k_base encoding.")
+            insighter_logger.exception("Warning: model not found. Using cl100k_base encoding.")
             encoding = tiktoken.get_encoding("cl100k_base")
         if model in TextTokenizer.MODELS:
             tokens_per_message = TextTokenizer.TOKENS_PER_MESSAGE_RU
@@ -64,11 +65,11 @@ class TextTokenizer:
             tokens_per_message = TextTokenizer.TOKENS_PER_MESSAGE_RU + 1  # every message follows <|start|>{role/name}\n{content}<|end|>\n
             tokens_per_name = -1  # if there's a name, the role is omitted
         elif "gpt-3.5-turbo" in model:
-            logging.info(
+            insighter_logger.info(
                 "Warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613.")
             return self.num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613")
         elif "gpt-4" in model:
-            logging.info("Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613.")
+            insighter_logger.info("Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613.")
             return self.num_tokens_from_messages(messages, model="gpt-4-0613")
         else:
             raise NotImplementedError(
@@ -105,10 +106,10 @@ class TextTokenizer:
                 text_size = await loop.run_in_executor(
                     pool, self.num_tokens_from_string, text
                 )
-                logging.info(f"Measure token capacity it equals {text_size}")
+                insighter_logger.info(f"Measure token capacity it equals {text_size}")
                 return text_size
             except Exception as e:
-                logging.error("cant measure token capacity")
+                insighter_logger.exception("cant measure token capacity")
                 raise TokenCapacityMeasurement(f"cant measure amount of token.\n An error {e} have came around")
 
     async def measure_characters_in_tokens(self,
@@ -126,10 +127,10 @@ class TextTokenizer:
                 characters = await loop.run_in_executor(
                     pool, self.tokens_to_characters_gpt4_russian, tokens_count
                 )
-                logging.info(f"characters in token {characters}")
+                insighter_logger.info(f"characters in token {characters}")
                 return characters
             except Exception as e:
-                logging.error("cant measure characters ")
+                insighter_logger.exception("cant measure characters ")
                 raise CharactersInTokenMeasurement(
                     f"cant measure amount of characters in tokens .\n An error {e} have came around")
 
@@ -257,7 +258,7 @@ class OneRequestGPTWorker(RequestGPTWorker):
                                                                     additional_system_information=additional_system_information,
                                                                     additional_user_information=additional_user_information)
         except Exception as e:
-            logging.exception("Failed to generate datda for for model")
+            insighter_logger.exception("Failed to generate datda for for model")
             raise GeneratingDataForModelError("Failed to generate datda for for model", exception=e)
 
         gpt_client: GPTClient = await self.load_gpt()
@@ -265,11 +266,11 @@ class OneRequestGPTWorker(RequestGPTWorker):
             response = await gpt_client.complete(messages=[user_message],
                                                  system_message=system_massage,
                                                  )
-            logging.info(f"successful gpt api request. result is: \n {response} ")
+            insighter_logger.info(f"successful gpt api request. result is: \n {response} ")
             return response
 
         except Exception as e:
-            logging.exception(f"Somthing went wrong with gpt api request. Error {e}")
+            insighter_logger.exception(f"Somthing went wrong with gpt api request. Error {e}")
             raise GptApiRequestError(f"Somthing went wrong with gpt api request. Error {e}",
                                      exception=e)
 
@@ -304,8 +305,8 @@ class BigDataGPTWorker(RequestGPTWorker):
                                             chunk_overlap=chunk_overlap)
             return text_spliter
         except LookupError as e:
-            logging.exception(f'"nltk.download("punkt") is not  installed" exeption {e}')
-            logging.info('start_downloading version nltk.download("popular")')
+            insighter_logger.exception(f'"nltk.download("punkt") is not  installed" exeption {e}')
+            insighter_logger.info('start_downloading version nltk.download("popular")')
             nltk.download('popular')
             text_spliter = NLTKTextSplitter(chunk_size=chunk_size,
                                             chunk_overlap=chunk_overlap)
@@ -338,10 +339,10 @@ class BigDataGPTWorker(RequestGPTWorker):
         ))
         try:
             result = await task
-            logging.info("Successfully genereate LLM answer from long text")
+            insighter_logger.info("Successfully genereate LLM answer from long text")
             return result
         except Exception as e:
-            logging.exception(e)
+            insighter_logger.exception(e)
 
     async def __init_model_parametrs(self):
         model = await self.model_manager.get_current_gpt_model_in_use_from_env()
@@ -421,7 +422,7 @@ class BigDataGPTWorker(RequestGPTWorker):
             )
             return result
         except Exception as e:
-            logging.exception("Ошибка при выполнении __make_long_text:", exc_info=e)
+            insighter_logger.exception("Ошибка при выполнении __make_long_text:", exc_info=e)
 
     @ameasure_time
     async def generate_data(self,
@@ -486,10 +487,10 @@ class GPTDispatcher(IGPTDispatcher):
                                                            additional_system_information=additional_system_information,
                                                            additional_user_information=additional_user_information,
                                                            )
-            logging.info("successful api request from dispatcher")
+            insighter_logger.info("successful api request from dispatcher")
             return result
         except GptApiRequestError as e:
-            logging.exception(f'Failed to make request, exception is: {e.exception}')
+            insighter_logger.exception(f'Failed to make request, exception is: {e.exception}')
             raise CompileRequestError
 
     async def __factory_method(self, income_text: str):
@@ -500,14 +501,14 @@ class GPTDispatcher(IGPTDispatcher):
             try:
                 return self.__long_request_gpt
             except Exception as e:
-                logging.exception("Failed to load long request method")
+                insighter_logger.exception("Failed to load long request method")
                 raise LoadingLongRequestMethodError(message="Failed to load usual long request method", exception=e)
         # if token capacity of text less than model size. Usual Gpt api request
         else:
             try:
                 return self.__one_request_gpt
             except Exception as e:
-                logging.exception("Failed to load usual short request method")
+                insighter_logger.exception("Failed to load usual short request method")
                 raise LoadingShortRequestMethodError(message="Failed to load usual short request method", exception=e)
 
 
@@ -540,8 +541,8 @@ class GPTDispatcherOnlyLonghain(IGPTDispatcher):
                                                                     additional_system_information=additional_system_information,
                                                                     additional_user_information=additional_user_information,
                                                                     )
-            logging.info("successful api request from dispatcher")
+            insighter_logger.info("successful api request from dispatcher")
             return result
         except GptApiRequestError as e:
-            logging.exception(f'Failed to make request, exception is: {e.exception}')
+            insighter_logger.exception(f'Failed to make request, exception is: {e.exception}')
             raise CompileRequestError
