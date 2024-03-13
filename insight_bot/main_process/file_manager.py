@@ -46,7 +46,7 @@ class MediaFileManager(IMediaFileManager):
                                    bot: Bot) -> str:
         content_type_to_folder = {
             ContentType.VIDEO: 'videos',
-            ContentType.VOICE: 'music',
+            ContentType.VOICE: 'voice',
             ContentType.AUDIO: 'music',
             ContentType.DOCUMENT: 'documents'
         }
