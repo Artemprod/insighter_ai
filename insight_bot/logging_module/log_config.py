@@ -37,6 +37,7 @@ def load_loguru():
 
 
 insighter_logger = load_loguru()
+
 if __name__ == '__main__':
 
     def divide(a, b):

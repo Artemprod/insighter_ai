@@ -113,7 +113,7 @@ class MongoUserRepoORM:
                             tg_link,
                             attempts=3,
                             money=0,
-                            seconds=6000, insighter_insighter_logger=None):
+                            seconds=6000):
         new_user: User = User(
             tg_username=tg_username,
             tg_link=tg_link,
@@ -129,11 +129,10 @@ class MongoUserRepoORM:
 
         try:
             new_user.save()
-            insighter_insighter_logger.info(f'Новый пользователь сохранен в базе {tg_username}, {name}, {tg_id}')
-            print(f'Новый пользователь сохранен в базе {tg_username}, {name}, {tg_id}')
+            insighter_logger.info(f'Новый пользователь сохранен в базе {tg_username}, {name}, {tg_id}')
         except Exception as e:
-            insighter_logger.exception(e, f"Ошибка в сохранение новго пользователя {tg_username}, {name}, {tg_id}")
-            print(e, f"Ошибка в сохранение новго пользователя {tg_username}, {name}, {tg_id}")
+            insighter_logger.exception(f"Ошибка в сохранение нового пользователя {tg_username}, {name}, {tg_id}: {e}")
+
 
     @staticmethod
     def add_attempts(tg_id,
@@ -143,10 +142,10 @@ class MongoUserRepoORM:
         try:
             user.save()
             insighter_logger.info(f'Попытки добавлены для {user.tg_username}, {user.name}, {user.tg_id}')
-            print(f'Попытки добавлены для {user.tg_username}, {user.name}, {user.tg_id}')
+
         except Exception as e:
-            insighter_logger.exception(e, f"Ошибка в обновлении попыток {user.tg_username}, {user.name}, {user.tg_id}")
-            print(e, f"Ошибка в обновлении попыток  {user.tg_username}, {user.name}, {user.tg_id}")
+            insighter_logger.exception(f"Ошибка в обновлении попыток {user.tg_username}, {user.name}, {user.tg_id}: {e}")
+
 
     @staticmethod
     async def delete_one_attempt(tg_id):
@@ -156,13 +155,13 @@ class MongoUserRepoORM:
             try:
                 user.save()
                 insighter_logger.info(f'Попытка вычтена {user.tg_username}, {user.name}, {user.tg_id}')
-                print(f'Попытка вычтена {user.tg_username}, {user.name}, {user.tg_id}')
+
             except Exception as e:
-                insighter_logger.exception(e, f"Ошибка в вычитаниее попыток {user.tg_username}, {user.name}, {user.tg_id}")
-                print(e, f"Ошибка в вычитаниее попыток {user.tg_username}, {user.name}, {user.tg_id}")
+                insighter_logger.exception(f"Ошибка в вычитаниее попыток {user.tg_username}, {user.name}, {user.tg_id}: {e}")
+
         else:
             insighter_logger.info(f'0 попыток нужно дбавить  {user.tg_username}, {user.name}, {user.tg_id}')
-            print(f'0 попыток нужно дбавить {user.tg_username}, {user.name}, {user.tg_id}')
+
             return None
 
     @staticmethod
