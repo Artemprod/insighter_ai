@@ -1,8 +1,5 @@
 # Определение названий моделей GPT
 import asyncio
-import logging
-from enum import Enum
-
 from environs import Env
 
 from costume_excepyions.config_loading import ModelVersionLoadingError, APIKeyLoadError, ContextLengthLoadingError, \

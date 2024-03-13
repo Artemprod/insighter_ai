@@ -20,7 +20,7 @@ from main_process.text_invoke import PdfFileHandler, TxtFileHandler, VideoFileHa
     TextInvokeFactory, FORMATS
 
 # ______LOGGING____________________________________________
-logger = load_loguru()
+
 # ______FORMATS____________________________________________
 formats = FORMATS()
 # ______CONFIGS____________________________________________

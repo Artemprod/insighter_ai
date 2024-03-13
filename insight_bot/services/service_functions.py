@@ -1,21 +1,21 @@
 import asyncio
-import logging
+
 import datetime as dt_t
 import math
 from datetime import datetime
-from typing import Callable
+
 
 import ffmpeg
 import tiktoken
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, ContentType, Audio
+from aiogram.types import Message
 from aiogram import Bot
 
 from DB.Mongo.mongo_db import MongoAssistantRepositoryORM, UserBalanceRepoORM
-from DB.Mongo.mongo_enteties import Assistant, Transactions
+from DB.Mongo.mongo_enteties import Assistant
 from api.gpt import GPTAPIrequest
 import os
-from abc import ABC, abstractmethod
+from abc import ABC
 
 from costume_excepyions.system_exceptions import SystemTypeError
 from enteties.pipline_data import PipelineData
@@ -25,7 +25,7 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 
-from insiht_bot_container import server_file_manager, config_data, file_format_manager, text_invoker, logger
+from insiht_bot_container import server_file_manager, config_data, file_format_manager, text_invoker
 from lexicon.LEXICON_RU import LEXICON_RU
 from logging_module.log_config import insighter_logger
 from main_process.file_manager import ServerFileManager

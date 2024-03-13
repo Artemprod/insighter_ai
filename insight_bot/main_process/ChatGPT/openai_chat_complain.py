@@ -1,5 +1,5 @@
 import asyncio
-import logging
+
 from openai import AsyncOpenAI
 
 

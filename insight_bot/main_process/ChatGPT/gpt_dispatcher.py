@@ -1,17 +1,15 @@
 import asyncio
 from abc import ABC, abstractmethod
-import logging
+
 import os
 from functools import partial
 
-# import spacy
-# from langchain.text_splitter import SpacyTextSplitter
 import nltk
 import tiktoken
 from concurrent.futures import ProcessPoolExecutor
 
 from langchain.chains import LLMChain, StuffDocumentsChain, ReduceDocumentsChain, MapReduceDocumentsChain
-from langchain.text_splitter import RecursiveCharacterTextSplitter, NLTKTextSplitter, logger
+from langchain.text_splitter import RecursiveCharacterTextSplitter, NLTKTextSplitter
 from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI

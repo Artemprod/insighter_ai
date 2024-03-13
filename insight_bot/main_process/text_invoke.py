@@ -1,10 +1,10 @@
 import asyncio
-import logging
+
 import os
 from abc import ABC, abstractmethod
 
 import chardet
-from charset_normalizer import from_bytes
+
 import aiofiles
 from PyPDF2 import PdfReader
 from os import path

@@ -11,7 +11,7 @@ import asyncio
 
 from retry import retry
 
-from insiht_bot_container import config_data, logger
+from insiht_bot_container import config_data
 from logging_module.log_config import insighter_logger
 
 

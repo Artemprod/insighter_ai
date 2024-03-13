@@ -1,6 +1,5 @@
 import asyncio
-import concurrent.futures
-import logging
+
 from concurrent.futures import ProcessPoolExecutor
 
 from aiogram.types import Message, ContentType

@@ -1,10 +1,6 @@
-
-
 import os
-
 from logging_module.log_config import insighter_logger
 from main_process.file_format_manager import FileFormatDefiner
-
 import asyncio
 from pydub import AudioSegment
 from functools import partial

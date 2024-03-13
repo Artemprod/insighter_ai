@@ -1,7 +1,3 @@
-# Определение названий моделей GPT
-import asyncio
-import logging
-from enum import Enum
 
 from environs import Env
 

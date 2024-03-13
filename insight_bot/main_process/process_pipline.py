@@ -1,16 +1,16 @@
 import asyncio
-import logging
+
 import time
 from asyncio import Queue
-from typing import Optional
+
 
 from aiofiles import os as asyncos
 import aiogram
-from dataclasses import dataclass
+
 from DB.Mongo.mongo_db import UserDocsRepoORM
 from api.progress_bar.command import ProgressBarClient
 from config.bot_configs import Config
-from costume_excepyions.format_exceptions import EncodingDetectionError
+
 
 from enteties.pipline_data import PipelineData
 

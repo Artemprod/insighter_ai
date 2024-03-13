@@ -1,8 +1,4 @@
-import os
 
-import aiofiles
-import chardet
-from PyPDF2 import PdfReader
 
 
 # class FileHandler:
