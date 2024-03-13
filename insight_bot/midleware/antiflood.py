@@ -19,10 +19,8 @@ class AntiFloodMiddleware(BaseMiddleware):
         chat_id = message = None
         if hasattr(event, 'message'):
             chat_id = event.message.chat.id
-            message = event.message
         elif hasattr(event, 'callback_query') and event.callback_query:
             chat_id = event.callback_query.message.chat.id
-            message = event.callback_query.message
 
         if chat_id is not None:
             current_time = datetime.now()
