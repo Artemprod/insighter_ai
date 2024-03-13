@@ -30,7 +30,7 @@ class TelegramServerFileFormatDefiner(FileFormatDefiner):
             result = await magic_task
             return result.split('/')[-1]
         except (PathDoesntExistError, WrongCodecError):
-            insighter_logger.exception('magic_task failed to handle a work')
+            insighter_logger.info('magic_task failed to handle a work')
             insighter_logger.info('start kind task...')
             kind_task = asyncio.create_task(self.__kind_define_format(file_path=file_path),
                                             name="define format by kind")
@@ -39,7 +39,7 @@ class TelegramServerFileFormatDefiner(FileFormatDefiner):
                 return result
 
             except UnknownFormatRecognitionError:
-                insighter_logger.exception('magic_task failed to handle a work')
+                insighter_logger.info('kind_task failed to handle a work')
                 insighter_logger.info('start simple string task...')
                 string_task = asyncio.create_task(self.__simple_string_define_format(file_path=file_path),
                                                   name="define format by simple string recogntion")
