@@ -87,6 +87,7 @@ class ProcesQueuePipline:
         except Exception as e:
             await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                  text=LEXICON_RU['error_message'])
+            await self.progress_bar.stop(chat_id=message.from_user.id)
             insighter_logger.exception(e)
 
 
@@ -118,7 +119,8 @@ class ProcesQueuePipline:
                     await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
                     await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                          text=LEXICON_RU['error_message'])
-                    insighter_logger.exception(e)
+                    await self.progress_bar.stop(chat_id=data.telegram_message.from_user.id)
+
                 if invoked_text:
                     post_processed_text = await self.__post_processor.remove_redundant_repeats(text=invoked_text)
                     data.transcribed_text = post_processed_text
@@ -136,6 +138,7 @@ class ProcesQueuePipline:
                         await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
                         await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                              text=LEXICON_RU['error_message'])
+                        await self.progress_bar.stop(chat_id=data.telegram_message.from_user.id)
 
                     finally:
                         insighter_logger.info(f"Провел извлевчение {data}")
@@ -151,6 +154,7 @@ class ProcesQueuePipline:
                     await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
                     await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                          text=LEXICON_RU['error_message'])
+                    await self.progress_bar.stop(chat_id=data.telegram_message.from_user.id)
 
 
 
@@ -159,6 +163,7 @@ class ProcesQueuePipline:
                 await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
                 await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                      text=LEXICON_RU['error_message'])
+                await self.progress_bar.stop(chat_id=data.telegram_message.from_user.id)
 
 
 
@@ -189,6 +194,7 @@ class ProcesQueuePipline:
                             summary_text=summary)
                     except Exception as e:
                         insighter_logger.exception(e, "cant save summary text in database", self.__dict__)
+                        await self.progress_bar.stop(chat_id=data.telegram_message.from_user.id)
                     finally:
                         await result_dispatching_queue.put(data)
                         gen_answer_queue.task_done()
@@ -201,6 +207,7 @@ class ProcesQueuePipline:
                     await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
                     await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                          text=LEXICON_RU['error_message'])
+                    await self.progress_bar.stop(chat_id=data.telegram_message.from_user.id)
 
 
 
@@ -209,6 +216,7 @@ class ProcesQueuePipline:
                 await data.fsm_bot_state.set_state(FSMSummaryFromAudioScenario.load_file)
                 await data.telegram_bot.send_message(chat_id=data.telegram_message.chat.id,
                                                      text=LEXICON_RU['error_message'])
+                await self.progress_bar.stop(chat_id=data.telegram_message.from_user.id)
 
 
     @staticmethod
