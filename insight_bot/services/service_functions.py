@@ -4,7 +4,6 @@ import datetime as dt_t
 import math
 from datetime import datetime
 
-
 import ffmpeg
 import tiktoken
 from aiogram.fsm.context import FSMContext
@@ -151,8 +150,8 @@ async def from_pipeline_data_object(
         assistant_id: str,
         fsm_state: FSMContext,
         file_duration: float,
-        file_path:str,
-        file_type:str,
+        file_path: str,
+        file_type: str,
         additional_system_information=None,
         additional_user_information=None,
 ) -> PipelineData:
@@ -217,7 +216,7 @@ async def estimate_transcribe_duration(message: Message):
         download_file_duration = await estimate_download_file_duration(media_type=message.document)
         return int((download_file_duration + 6))
 
-    elif media == 'music' or media == "audio" :
+    elif media == 'music' or media == "audio":
         download_file_duration = await estimate_download_file_duration(media_type=message.audio)
         transcribe_duration = await estimate_transcribe_file_duration(media_type=message.audio)
         return int((download_file_duration + transcribe_duration + 6))
@@ -431,7 +430,6 @@ async def calculate_whisper_cost(duration_sec,
 async def format_filter(message,
                         bot,
                         state):
-
     system = config_data.system.system_type
     print(system)
     if system == "docker":
@@ -456,15 +454,21 @@ async def format_filter(message,
         else:
             await bot.delete_message(message_id=begin_message.message_id, chat_id=begin_message.chat.id)
             message = await bot.send_message(chat_id=message.chat.id,
-                                                 text=LEXICON_RU['wrong_format'].format(
-                                                     income_file_format=income_file_format,
-                                                     actual_formats=LEXICON_RU['actual_formats'])
-                                                 )
+                                             text=LEXICON_RU['wrong_format'].format(
+                                                 income_file_format=income_file_format,
+                                                 actual_formats=LEXICON_RU['actual_formats'])
+                                             )
             await state.update_data(instruction_message_id=message.message_id)
             await state.set_state(FSMSummaryFromAudioScenario.load_file)
             return None
     except Exception as e:
         insighter_logger.exception(e)
+        await bot.delete_message(message_id=begin_message.message_id, chat_id=begin_message.chat.id)
+        message = await bot.send_message(chat_id=message.chat.id,
+                                         text=LEXICON_RU['error_message'])
+
+        await state.update_data(instruction_message_id=message.message_id)
+        await state.set_state(FSMSummaryFromAudioScenario.load_file)
 
 
 if __name__ == '__main__':

@@ -71,8 +71,6 @@ async def wrong_file_format(message: Message,
                                                                   actual_formats=LEXICON_RU['actual_formats']))
 
 
-
-
 @router.message(FSMSummaryFromAudioScenario.load_file, F.content_type.in_({ContentType.VOICE,
                                                                            ContentType.AUDIO,
                                                                            ContentType.VIDEO,
@@ -90,56 +88,63 @@ async def processed_load_file(message: Message, bot: Bot,
     data = await state.get_data()
     assistant_id = data.get('assistant_id')
     instruction_message_id = int(data.get('instruction_message_id'))
-    file_data = await format_filter(message=message,
-                                    bot=bot,
-                                    state=state)
-    if file_data:
-        file_path, income_file_format = file_data
-        file_duration = await estimate_media_duration_in_minutes(bot=bot, message=message)
-        # Проверяем есть ли минуты
-        checking = await compare_user_minutes_and_file(user_tg_id=message.from_user.id,
-                                                       file_duration=file_duration,
-                                                       user_balance_repo=user_balance_repo)
-        print(checking)
-        if checking >= 0:
-            # await check_if_i_can_load()
-            if instruction_message_id:
-                try:
-                    await bot.delete_message(chat_id=message.chat.id, message_id=instruction_message_id)
-                except TelegramBadRequest as e:
-                    insighter_logger.exception(f"Ошибка при попытке удалить сообщение: {e}")
+    try:
+        file_data = await format_filter(message=message,
+                                        bot=bot,
+                                        state=state)
+        if file_data:
+            file_path, income_file_format = file_data
+            file_duration = await estimate_media_duration_in_minutes(bot=bot, message=message)
+            # Проверяем есть ли минуты
+            checking = await compare_user_minutes_and_file(user_tg_id=message.from_user.id,
+                                                           file_duration=file_duration,
+                                                           user_balance_repo=user_balance_repo)
+            if checking >= 0:
+                # await check_if_i_can_load()
+                if instruction_message_id:
+                    try:
+                        await bot.delete_message(chat_id=message.chat.id, message_id=instruction_message_id)
+                    except TelegramBadRequest as e:
+                        insighter_logger.exception(f"Ошибка при попытке удалить сообщение: {e}")
 
-            # Form data to summary pipline
-            pipline_object = await from_pipeline_data_object(message=message,
-                                                             bot=bot,
-                                                             assistant_id=assistant_id,
-                                                             fsm_state=state,
-                                                             file_duration=file_duration,
-                                                             file_path=file_path,
-                                                             file_type=income_file_format,
-                                                             additional_system_information=None,
-                                                             additional_user_information=None)
+                # Form data to summary pipline
+                pipline_object = await from_pipeline_data_object(message=message,
+                                                                 bot=bot,
+                                                                 assistant_id=assistant_id,
+                                                                 fsm_state=state,
+                                                                 file_duration=file_duration,
+                                                                 file_path=file_path,
+                                                                 file_type=income_file_format,
+                                                                 additional_system_information=None,
+                                                                 additional_user_information=None)
 
-            # Start pipline process
-            await process_queue.income_items_queue.put(pipline_object)
-            await state.set_state(FSMSummaryFromAudioScenario.get_result)
-            # Переход в новый стату вызов функции явно
-            await processed_do_ai_conversation(message=message, state=state,
-                                               user_repository=user_repository, bot=bot,
-                                               assistant_repository=assistant_repository,
-                                               progress_bar=progress_bar,
-                                               process_queue=process_queue,
-                                               user_balance_repo=user_balance_repo,
-                                               document_repository=document_repository
-                                               )
-        else:
+                # Start pipline process
+                await process_queue.income_items_queue.put(pipline_object)
+                await state.set_state(FSMSummaryFromAudioScenario.get_result)
+                # Переход в новый стату вызов функции явно
+                await processed_do_ai_conversation(message=message, state=state,
+                                                   user_repository=user_repository, bot=bot,
+                                                   assistant_repository=assistant_repository,
+                                                   progress_bar=progress_bar,
+                                                   process_queue=process_queue,
+                                                   user_balance_repo=user_balance_repo,
+                                                   document_repository=document_repository
+                                                   )
+            else:
 
-            keyboard = crete_inline_keyboard_payed()
+                keyboard = crete_inline_keyboard_payed()
 
-            await message.bot.send_message(chat_id=message.chat.id,
-                                           text=TIME_ERROR_MESSAGE.format(time=await seconds_to_min_sec(abs(checking))))
-            await message.answer_contact(phone_number="+79896186869", first_name="Александр",
-                                         last_name="Чернышов", reply_markup=keyboard)
+                await message.bot.send_message(chat_id=message.chat.id,
+                                               text=TIME_ERROR_MESSAGE.format(
+                                                   time=await seconds_to_min_sec(abs(checking))))
+                await message.answer_contact(phone_number="+79896186869", first_name="Александр",
+                                             last_name="Чернышов", reply_markup=keyboard)
+    except Exception as e:
+        insighter_logger.exception(f"Sommthing happend in defining format file ", e)
+        await bot.delete_message(message_id=instruction_message_id, chat_id=message.chat.id)
+        await bot.send_message(chat_id=message.chat.id,
+                               text=LEXICON_RU['error_message'])
+        await state.set_state(FSMSummaryFromAudioScenario.load_file)
 
 
 @router.message(FSMSummaryFromAudioScenario.get_result)
@@ -213,7 +218,6 @@ async def processed_do_ai_conversation(message: Message, bot: Bot,
 
         }
 
-        print(meta_information)
         await document_repository.add_meta_information(tg_id=result.telegram_message.from_user.id,
                                                        doc_id=result.debase_document_id,
                                                        info=meta_information)
