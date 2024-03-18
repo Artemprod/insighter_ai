@@ -1,17 +1,23 @@
-FROM python:3.9
+FROM python:3.10-slim
 
-# Копируем весь проект в контейнер
-COPY . .
+WORKDIR /app
 
+ENV PYTHONPATH "${PYTHONPATH}:/app"
 
-RUN apt-get update -y && apt-get upgrade -y && apt-get install nano -y && pip install --upgrade pip  \
-    && apt-get install -y micro  \
-    && pip install --upgrade setuptools && pip install mutagen \
-    && pip install -r requirements.txt && apt-get install -y ffmpeg  \
+RUN apt-get update && apt-get install -y --no-install-recommends make curl \
+    && apt-get install -y ffmpeg  \
+    && pip install mutagen \
+    && apt-get install nano && apt-get install -y micro  \
     && apt-get clean
 
+RUN pip install --no-cache-dir poetry==1.7.1
 
+COPY pyproject.toml poetry.lock ./
 
-ENV PYTHONPATH $PYTHONPATH:.
+RUN poetry config virtualenvs.create false && poetry install --no-root
+
+COPY . ./
+
+ENTRYPOINT ["poetry", "run"]
 
 CMD ["python3", "bot.py"]

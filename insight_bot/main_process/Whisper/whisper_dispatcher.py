@@ -65,7 +65,7 @@ class LongMediaFilesTranscriber(MediaFileTranscriber):
             ))
             try:
                 result = await task
-                insighter_logger.info(f"Successfully transcribe text. Result: {result}")
+                insighter_logger.info(f"Successfully transcribe text")
                 return result
             except Exception as e:
                 insighter_logger.exception(e)
@@ -126,8 +126,7 @@ class MediaRecognitionFactory:
         try:
             request_method = await self.__factory_method(file_path=file_path)
             result = await request_method.transcribe_media(file=file_path)
-            insighter_logger.info(f"successful transcribe text. Result is:"
-                         f" \n {result}")
+            insighter_logger.info(f"successful transcribe text")
             return result
         except Exception as e:
             insighter_logger.exception(f'Failed to make request, exception is: {e}')

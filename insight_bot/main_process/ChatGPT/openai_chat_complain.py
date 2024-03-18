@@ -69,7 +69,7 @@ class GPTClient:
             response_choice = response.choices[0]  # Получаем первый диалоговый выбор.
             response_message = response_choice.message  # Извлекаем сообщение из выбранного диалога.
             response_text = response_message.content  # Поле 'content' содержит текст ответа.
-            insighter_logger.info('response_text:', response_text)
+            insighter_logger.info('response from gpt done')
         else:
             # Обработка случая, когда список 'choices' пуст.
             insighter_logger.exception('No choices returned in the response.')

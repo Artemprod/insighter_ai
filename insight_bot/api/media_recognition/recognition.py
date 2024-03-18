@@ -52,7 +52,7 @@ class WhisperRecognitionAPI:
                 raise e
         try:
             result = await self.get_api_request(file_path)
-            insighter_logger.info(result)
+
             end_time = time.time()
             insighter_logger.info("время транспирации:", end_time - start_time)
             print(f"Время выполнения: {end_time - start_time} секунд")

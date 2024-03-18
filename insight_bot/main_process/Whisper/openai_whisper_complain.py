@@ -52,7 +52,7 @@ class WhisperClient:
 
         response = await asyncio.create_task(task)
         if response.text:
-            insighter_logger.info('response_text:', response.text)
+            insighter_logger.info('response from whisper received')
             return response.text
         else:
             insighter_logger.exception('No data returned in the response.')

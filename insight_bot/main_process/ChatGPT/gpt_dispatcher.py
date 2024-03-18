@@ -264,7 +264,7 @@ class OneRequestGPTWorker(RequestGPTWorker):
             response = await gpt_client.complete(messages=[user_message],
                                                  system_message=system_massage,
                                                  )
-            insighter_logger.info(f"successful gpt api request. result is: \n {response} ")
+            insighter_logger.info(f"successful gpt api request ")
             return response
 
         except Exception as e:

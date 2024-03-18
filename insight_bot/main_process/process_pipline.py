@@ -175,7 +175,7 @@ class ProcesQueuePipline:
             data.process_time.setdefault('generate_summary_answer', dict())
             data.process_time['generate_summary_answer']['start_time'] = time.time()
             insighter_logger.info(f'Получил данные для генерации текста {data}')
-            insighter_logger.info(f'Вот препроцессинг текст {data.preprocessed_text}')
+
             text_to_summary = data.transcribed_text
             if text_to_summary:
                 summary = await self.__ai_llm_request.compile_request(

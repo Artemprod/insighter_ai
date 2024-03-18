@@ -117,7 +117,7 @@ class VideoFileHandler(IVideoFileHandler):
     async def invoke_text(self, file_path):
         try:
             result = await self.__recognizer.compile_transcription(file_path=file_path)
-            insighter_logger.info(f"Text from VIDEO successfully invoked. \n The result: \n {result}")
+            insighter_logger.info(f"Text from VIDEO successfully invoked.")
             return result
         except Exception as e:
             insighter_logger.exception(f"something went wrong in text from Video invoking process. Error: {e}")
@@ -130,7 +130,7 @@ class AudioFileHandler(IAudioFileHandler):
     async def invoke_text(self, file_path):
         try:
             result = await self.__recognizer.compile_transcription(file_path=file_path)
-            insighter_logger.info(f"Text from AUDIO successfully invoked. \n The result: \n {result}")
+            insighter_logger.info(f"Text from AUDIO successfully invoked.")
             return result
         except Exception as e:
             insighter_logger.exception(f"something went wrong in text from Video invoking process. Error: {e}")
